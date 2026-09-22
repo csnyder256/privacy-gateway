@@ -161,7 +161,7 @@ persists its encrypted SQLite database in a named volume. See [operations](docs/
 ## Presets
 
 Start from `balanced`, `strict`, `healthcare`, `finance`, or `devsecops`, then override any
-rule. Presets are ordinary versioned policies—not hidden behavior.
+rule. Presets are ordinary versioned policies, not hidden behavior.
 
 ```python
 from privacy_gateway.models import Action, EntityType
