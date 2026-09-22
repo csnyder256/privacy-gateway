@@ -94,9 +94,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
                 )
             }
         except InvalidTag as exc:
-            raise HTTPException(
-                status_code=422, detail="capsule authentication failed"
-            ) from exc
+            raise HTTPException(status_code=422, detail="capsule authentication failed") from exc
         except (ValueError, TypeError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
