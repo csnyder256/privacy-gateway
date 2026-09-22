@@ -91,7 +91,6 @@ function renderEntities(filter = "") {
       <span><strong>${label}</strong><small>${help}</small></span>
       <label><span class="sr-only">Action for ${label}</span><select class="action" aria-label="Action for ${label}">${actions.map((action) => `<option ${action === rule.action ? "selected" : ""} ${mode === "oneway" && action === "tokenize" ? "disabled" : ""}>${action}</option>`).join("")}</select></label>
       <label class="reversible"><input type="checkbox" class="reverse" ${rule.reversible ? "checked" : ""} ${mode === "oneway" || irreversible.has(rule.action) ? "disabled" : ""}> restore</label>
-      <label class="confidence"><span class="sr-only">Confidence for ${label}</span><input class="confidence-value" aria-label="Confidence for ${label}" type="number" min="0" max="100" value="${rule.minimum_confidence_ppm / 10000}">%</label>
     </div>`;
   }).join("");
 }
@@ -229,7 +228,6 @@ $("#entity-table").addEventListener("change", (event) => {
   if (event.target.classList.contains("enabled")) rule.enabled = event.target.checked;
   if (event.target.classList.contains("action")) { rule.action = event.target.value; if (mode === "oneway" && rule.action === "tokenize") rule.action = "redact"; if (mode === "oneway" || irreversible.has(rule.action)) rule.reversible = false; else if (rule.action === "tokenize") rule.reversible = true; }
   if (event.target.classList.contains("reverse")) rule.reversible = mode === "oneway" ? false : event.target.checked;
-  if (event.target.classList.contains("confidence-value")) rule.minimum_confidence_ppm = Math.round(Math.max(0, Math.min(100, Number(event.target.value))) * 10000);
   renderEntities($("#entity-filter").value); updatePreview(); saveDraft();
 });
 $("#entity-filter").addEventListener("input", (event) => renderEntities(event.target.value));

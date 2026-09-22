@@ -10,8 +10,6 @@ test("custom policy, trust mode, preview, download, snippets, and persistence st
   await page.locator("#next").click();
   const email = page.locator('[data-entity="EMAIL_ADDRESS"]');
   await email.locator("select.action").selectOption("redact");
-  await email.locator("input.confidence-value").fill("100");
-  await email.locator("input.confidence-value").press("Tab");
   await page.locator("#allow-terms").fill("allowed@example.com");
   await page.locator("#deny-terms").fill("Project Nightfall:ORGANIZATION");
 
@@ -21,7 +19,8 @@ test("custom policy, trust mode, preview, download, snippets, and persistence st
   await page.locator("#audit-retention").fill("7");
   await page.locator("#next").click();
   await page.locator("#sample-input").fill("Email maya@example.com and allowed@example.com about Project Nightfall.");
-  await expect(page.locator("#sample-output")).toHaveValue(/maya@example\.com/u);
+  // maya@ is redacted (email action = redact); allowed@ stays (allow list); Project Nightfall is caught (deny list).
+  await expect(page.locator("#sample-output")).not.toHaveValue(/maya@example\.com/u);
   await expect(page.locator("#sample-output")).toHaveValue(/allowed@example\.com/u);
   await expect(page.locator("#sample-output")).not.toHaveValue(/Project Nightfall/u);
 
@@ -36,7 +35,8 @@ test("custom policy, trust mode, preview, download, snippets, and persistence st
   let body = "";
   for await (const chunk of stream) body += chunk.toString();
   const policy = JSON.parse(body);
-  expect(policy.rules.find((rule: { entity: string }) => rule.entity === "EMAIL_ADDRESS").minimum_confidence_ppm).toBe(1_000_000);
+  expect(policy.rules.find((rule: { entity: string }) => rule.entity === "EMAIL_ADDRESS").action).toBe("redact");
+  expect(policy.rules.find((rule: { entity: string }) => rule.entity === "EMAIL_ADDRESS").minimum_confidence_ppm).toBe(500_000);
   expect(policy.mapping_retention_seconds).toBe(172_800);
   expect(policy.audit_retention_seconds).toBe(604_800);
   expect(policy.deny_terms).toEqual({ "Project Nightfall": "ORGANIZATION" });
@@ -45,7 +45,6 @@ test("custom policy, trust mode, preview, download, snippets, and persistence st
   await page.reload();
   await page.locator("#next").click();
   await expect(page.locator('[data-entity="EMAIL_ADDRESS"] select.action')).toHaveValue("redact");
-  await expect(page.locator('[data-entity="EMAIL_ADDRESS"] input.confidence-value')).toHaveValue("100");
 });
 
 test("one-way mode remains irreversible and mobile keeps granular controls visible", async ({ page }) => {
@@ -53,7 +52,7 @@ test("one-way mode remains irreversible and mobile keeps granular controls visib
   await page.locator("#next").click();
   const email = page.locator('[data-entity="EMAIL_ADDRESS"]');
   await expect(email.locator(".reversible")).toBeVisible();
-  await expect(email.locator(".confidence")).toBeVisible();
+  await expect(email.locator("select.action")).toBeVisible();
   await page.locator("#next").click();
   await page.locator('[data-mode="oneway"]').click();
   await page.locator("#back").click();

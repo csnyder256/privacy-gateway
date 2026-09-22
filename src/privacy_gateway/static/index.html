@@ -3,64 +3,88 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Configure a source-agnostic privacy gateway in minutes." />
-    <title>Privacy Gateway: keep sensitive data local</title>
+    <meta name="description" content="A local-first boundary that strips PII before your data reaches any API, model, or agent, then restores approved values on the way back." />
+    <title>Privacy Gateway: the boundary your data stops at</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+    />
     <link rel="stylesheet" href="assets/app.css" />
   </head>
   <body>
+    <a class="skip-link" href="#configure">Skip to setup</a>
+
     <header class="topbar">
-      <a class="brand" href="#top" aria-label="Privacy Gateway home">Privacy Gateway</a>
-      <nav aria-label="Primary navigation">
+      <a class="brand" href="#top" aria-label="Privacy Gateway home">
+        <span class="brand-tick" aria-hidden="true"></span>
+        Privacy&nbsp;Gateway
+      </a>
+      <nav aria-label="Primary">
         <a href="#configure">Configure</a>
         <a href="#how">How it works</a>
-        <a href="https://github.com/csnyder256/privacy-gateway">GitHub</a>
+        <a href="https://github.com/csnyder256/privacy-gateway">Source</a>
       </nav>
+      <span class="topbar-meta">v0.1 / MIT</span>
     </header>
 
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Local-first privacy infrastructure</p>
-          <h1>Useful data goes out.<br /><span>Sensitive data stays in.</span></h1>
+          <p class="kicker"><span>01</span> Local-first PII boundary</p>
+          <h1>Useful data goes out.<br />Sensitive data stays in.</h1>
           <p class="lede">
-            Put one policy-controlled boundary between your data and any API, model, agent,
-            webhook, or pipeline. Detect, transform, audit, and restore without locking your
-            architecture to a single vendor.
+            One policy-controlled boundary sits between your data and any API, model, agent, or
+            pipeline. It detects, transforms, audits, and restores, and it does not lock your
+            stack to a single vendor.
           </p>
           <div class="hero-actions">
-            <a class="button primary" href="#configure">Build my policy</a>
-            <a class="button ghost" href="https://github.com/csnyder256/privacy-gateway">View source</a>
+            <a class="button primary" href="#configure">Build a policy</a>
+            <a class="button text" href="https://github.com/csnyder256/privacy-gateway">Read the source</a>
           </div>
-          <div class="trust-row" aria-label="Product attributes">
-            <span>MIT licensed</span><span>Fail closed</span><span>Python + TypeScript</span>
-          </div>
+          <ul class="spec-list" aria-label="What it is">
+            <li><span>MIT</span> licensed</li>
+            <li><span>fail</span> closed</li>
+            <li><span>runs</span> offline</li>
+            <li><span>py + ts</span> cores</li>
+          </ul>
         </div>
-        <div class="terminal-card" aria-label="Anonymization example">
-          <div class="terminal-bar"><span>privacy-gateway · policy preview</span></div>
-          <div class="terminal-body">
-            <p class="terminal-label">BEFORE</p>
-            <p>Ask <mark>maya@acme.com</mark> about card <mark>4111 1111 1111 1111</mark>.</p>
-            <div class="flow-line"><span></span><b>policy: finance</b><span></span></div>
-            <p class="terminal-label safe">PROTECTED</p>
-            <p>Ask <code>[[PG1|EMAIL|…]]</code> about card <code>[[PG1|CARD|…]]</code>.</p>
-            <div class="terminal-status"><span>2 values protected</span><span>0 originals forwarded</span></div>
+
+        <figure class="specimen" aria-label="Before and after a finance policy">
+          <figcaption class="specimen-head">
+            <span>policy.finance</span><span>transform.log</span>
+          </figcaption>
+          <div class="specimen-body">
+            <p class="specimen-tag">before</p>
+            <p class="specimen-line">
+              Ask <mark>maya@acme.com</mark> about card <mark>4111 1111 1111 1111</mark>.
+            </p>
+            <p class="specimen-rule"><span>transform</span></p>
+            <p class="specimen-tag out">protected</p>
+            <p class="specimen-line">
+              Ask <code>[[PG1&#124;EMAIL&#124;…]]</code> about card <code>[[PG1&#124;CARD&#124;…]]</code>.
+            </p>
           </div>
-        </div>
+          <div class="specimen-foot">
+            <span>2 values protected</span><span>0 originals forwarded</span>
+          </div>
+        </figure>
       </section>
 
-      <section class="proof-strip">
+      <section class="proof-strip" aria-label="At a glance">
         <div><strong>17</strong><span>entity types</span></div>
-        <div><strong>7</strong><span>transformation actions</span></div>
+        <div><strong>7</strong><span>transform actions</span></div>
         <div><strong>4</strong><span>trust modes</span></div>
         <div><strong>1</strong><span>portable policy</span></div>
       </section>
 
       <section id="configure" class="config-section">
         <div class="section-heading">
-          <p class="eyebrow">Guided setup</p>
+          <p class="kicker"><span>02</span> Guided setup</p>
           <h2>Build the boundary you actually need.</h2>
-          <p>No guessing and no all-or-nothing switch. Every decision remains visible.</p>
+          <p>No all-or-nothing switch. Every rule stays visible and yours to change.</p>
         </div>
 
         <div class="wizard-shell">
@@ -78,11 +102,11 @@
               <h3>What are you protecting?</h3>
               <p class="step-intro">Pick the closest starting point. You can change every rule next.</p>
               <div class="preset-grid" id="preset-grid">
-                <button class="preset active" data-preset="balanced"><span>◈</span><strong>Balanced</strong><small>Safe defaults for most applications</small></button>
-                <button class="preset" data-preset="strict"><span>⬢</span><strong>Strict</strong><small>Redact high-risk identifiers</small></button>
-                <button class="preset" data-preset="healthcare"><span>✚</span><strong>Healthcare</strong><small>Synthetic names, places, and dates</small></button>
-                <button class="preset" data-preset="finance"><span>▰</span><strong>Finance</strong><small>Payment and banking controls</small></button>
-                <button class="preset" data-preset="devsecops"><span>⌘</span><strong>DevSecOps</strong><small>Secrets and infrastructure data</small></button>
+                <button class="preset active" data-preset="balanced"><strong>Balanced</strong><small>Safe defaults for most applications</small></button>
+                <button class="preset" data-preset="strict"><strong>Strict</strong><small>Redact high-risk identifiers</small></button>
+                <button class="preset" data-preset="healthcare"><strong>Healthcare</strong><small>Synthetic names, places, and dates</small></button>
+                <button class="preset" data-preset="finance"><strong>Finance</strong><small>Payment and banking controls</small></button>
+                <button class="preset" data-preset="devsecops"><strong>DevSecOps</strong><small>Secrets and infrastructure data</small></button>
               </div>
             </section>
 
@@ -90,7 +114,7 @@
               <p class="step-kicker">Step 2 of 5</p>
               <div class="step-title-row"><div><h3>Decide what happens to each type.</h3><p class="step-intro">Enabled rules are evaluated locally before data crosses the boundary.</p></div><button class="text-button" id="toggle-all">Disable all</button></div>
               <div class="policy-toolbar">
-                <label>Filter <input id="entity-filter" type="search" placeholder="Email, API key, banking…" /></label>
+                <label>Filter <input id="entity-filter" type="search" placeholder="email, api key, banking" /></label>
                 <label>Locale <select id="locale"><option>en-US</option><option>es-ES</option><option>de-DE</option><option>fr-FR</option></select></label>
               </div>
               <div class="entity-table" id="entity-table"></div>
@@ -106,17 +130,17 @@
               <h3>Where should restoration keys live?</h3>
               <p class="step-intro">This choice controls who can turn protected values back into originals.</p>
               <div class="mode-list" id="mode-list">
-                <button class="mode active" data-mode="client"><span class="mode-icon">⌂</span><span><strong>Client-held capsule <em>Recommended</em></strong><small>Your application holds the key. The gateway stores no original values.</small></span><b>✓</b></button>
-                <button class="mode" data-mode="local"><span class="mode-icon">▣</span><span><strong>Local encrypted vault</strong><small>Encrypted mappings stay in SQLite on your own host.</small></span><b>✓</b></button>
-                <button class="mode" data-mode="selfhosted"><span class="mode-icon">◇</span><span><strong>Self-hosted network vault</strong><small>A central gateway you operate, backed by its encrypted SQLite volume.</small></span><b>✓</b></button>
-                <button class="mode" data-mode="oneway"><span class="mode-icon">×</span><span><strong>One-way only</strong><small>No restoration. Reversible rules will be converted to redaction.</small></span><b>✓</b></button>
+                <button class="mode active" data-mode="client"><span><strong>Client-held capsule <em>Recommended</em></strong><small>Your application holds the key. The gateway stores no original values.</small></span><b>&#10003;</b></button>
+                <button class="mode" data-mode="local"><span><strong>Local encrypted vault</strong><small>Encrypted mappings stay in SQLite on your own host.</small></span><b>&#10003;</b></button>
+                <button class="mode" data-mode="selfhosted"><span><strong>Self-hosted network vault</strong><small>A central gateway you operate, backed by its encrypted database volume.</small></span><b>&#10003;</b></button>
+                <button class="mode" data-mode="oneway"><span><strong>One-way only</strong><small>No restoration. Reversible rules will be converted to redaction.</small></span><b>&#10003;</b></button>
               </div>
               <div class="retention-card">
                 <div><strong>Mapping retention</strong><small>How long reversible mappings may exist</small></div>
                 <label><input id="retention" type="number" min="1" max="365" value="1" /> days</label>
               </div>
               <div class="retention-card">
-                <div><strong>Decision-audit retention</strong><small>How long classification metadata may exist; originals are never audit fields</small></div>
+                <div><strong>Decision-audit retention</strong><small>How long classification metadata may exist. Originals are never audit fields.</small></div>
                 <label><input id="audit-retention" type="number" min="1" max="365" value="30" /> days</label>
               </div>
             </section>
@@ -150,7 +174,7 @@
             </section>
 
             <div class="wizard-nav">
-              <button class="button ghost dark" id="back" disabled>Back</button>
+              <button class="button text dark" id="back" disabled>Back</button>
               <span id="step-status">1 / 5</span>
               <button class="button primary" id="next">Continue</button>
             </div>
@@ -159,17 +183,36 @@
       </section>
 
       <section id="how" class="how-section">
-        <div class="section-heading"><p class="eyebrow">One boundary, any source</p><h2>Designed to fit in, not take over.</h2></div>
-        <div class="how-grid">
-          <article><b>01</b><h3>Detect locally</h3><p>Regex, checksums, allow/deny lists, Presidio, and pluggable recognizers produce explicit confidence and provenance.</p></article>
-          <article><b>02</b><h3>Apply policy</h3><p>Deterministic precedence turns every finding into a visible keep, redact, tokenize, hash, generalize, or synthetic decision.</p></article>
-          <article><b>03</b><h3>Cross safely</h3><p>Only protected data reaches the external model, API, agent tool, webhook, or analytics system.</p></article>
-          <article><b>04</b><h3>Restore deliberately</h3><p>Client capsules or encrypted vault mappings restore approved output while queryable audit records explain every decision.</p></article>
+        <div class="section-heading">
+          <p class="kicker"><span>03</span> One boundary, any source</p>
+          <h2>Designed to fit in, not take over.</h2>
         </div>
+        <ol class="how-list">
+          <li>
+            <b>01</b>
+            <div><h3>Detect locally</h3><p>Regex, checksums, allow and deny lists, Presidio, and pluggable recognizers run on your own host and record explicit provenance for every finding.</p></div>
+          </li>
+          <li>
+            <b>02</b>
+            <div><h3>Apply policy</h3><p>Deterministic precedence turns each finding into a visible decision: keep, redact, tokenize, hash, generalize, or replace with a format-valid synthetic value.</p></div>
+          </li>
+          <li>
+            <b>03</b>
+            <div><h3>Cross safely</h3><p>Only protected data reaches the external model, API, agent tool, webhook, or warehouse. If detection cannot complete, the call is blocked rather than sent.</p></div>
+          </li>
+          <li>
+            <b>04</b>
+            <div><h3>Restore deliberately</h3><p>Client-held capsules or encrypted vault mappings restore approved output, while queryable audit records explain every classification and decision.</p></div>
+          </li>
+        </ol>
       </section>
     </main>
 
-    <footer><span>Privacy Gateway</span><p>Local-first privacy infrastructure · MIT licensed</p><a href="https://github.com/csnyder256/privacy-gateway">GitHub ↗</a></footer>
+    <footer>
+      <span class="footer-mark"><span class="brand-tick" aria-hidden="true"></span> Privacy Gateway</span>
+      <p>Local-first privacy infrastructure. MIT licensed.</p>
+      <a href="https://github.com/csnyder256/privacy-gateway">github.com/csnyder256/privacy-gateway</a>
+    </footer>
     <script src="assets/app.js" defer></script>
   </body>
 </html>

@@ -9,7 +9,7 @@ def test_onboarding_and_health_are_served(tmp_path):
     assert client.get("/v1/health").json()["ok"] is True
     page = client.get("/")
     assert page.status_code == 200
-    assert "Build my policy" in page.text
+    assert "Build a policy" in page.text
     assert client.get("/assets/app.css").status_code == 200
 
 
