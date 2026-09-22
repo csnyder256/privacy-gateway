@@ -1,0 +1,221 @@
+<div align="center">
+
+# Privacy Gateway
+
+### Keep sensitive data inside your trust boundary.
+
+Local-first PII detection, policy-controlled anonymization, encrypted reversible mappings,
+and client-held restoration for applications, APIs, and AI agents.
+
+[![CI](https://img.shields.io/github/actions/workflow/status/csnyder256/privacy-gateway/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/csnyder256/privacy-gateway/actions)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![Local First](https://img.shields.io/badge/Privacy-Local--First-7c3aed?style=for-the-badge)](#trust-modes)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#docker)
+[![MCP](https://img.shields.io/badge/MCP-Agent--Ready-f59e0b?style=for-the-badge)](AGENT-GUIDE.md)
+
+**[Documentation](https://csnyder256.github.io/privacy-gateway/)** ·
+**[Quick start](#quick-start)** · **[Agent setup](AGENT-GUIDE.md)** ·
+**[Threat model](docs/threat-boundaries.md)**
+
+</div>
+
+> [!IMPORTANT]
+> Privacy Gateway reduces exposure; it is not a legal-anonymity guarantee. Read the
+> [threat model](THREAT-MODEL.md) and [limitations](docs/limitations.md) before production use.
+
+## Why Privacy Gateway
+
+AI and data pipelines routinely cross trust boundaries. Privacy Gateway places a small,
+source-agnostic control plane in front of those boundaries:
+
+```text
+your application → detect → policy → transform → external system
+       ↑                                               ↓
+       └──────── client-side or encrypted restore ─────┘
+```
+
+- **Choose exactly what changes.** Every entity type gets its own action, confidence floor,
+  scope, locale, and reversibility setting; mapping and audit retention are policy-wide.
+- **Fail closed.** Required detector failure returns a blocked result; it never quietly sends
+  the original payload onward.
+- **Keep restoration local.** A client-held key can seal a restoration capsule so the gateway
+  never persists original values.
+- **Audit decisions, not secrets.** Query entity type, detector, confidence, action, policy
+  version, and byte span without storing plaintext values in audit rows.
+- **Plug in anywhere.** Supported surfaces include Python, TypeScript, ASGI middleware,
+  OpenAI/Anthropic-compatible proxies, MCP, webhooks, and CLI workflows.
+- **Generate safer test data.** Infer CSV/JSON/JSONL schemas, preserve constraints and
+  relationships, and receive aggregate quality/privacy reports.
+
+## Actions
+
+| Action | Result | Reversible |
+|---|---|---:|
+| `keep` | Leave the value unchanged | No |
+| `redact` | Replace with a typed redaction marker | No |
+| `label` | Replace with an entity label | No |
+| `tokenize` | Replace with an authenticated opaque token | Yes |
+| `hash` | Replace with a one-way digest | No |
+| `generalize` | Reduce precision, such as a date to a year | Optional |
+| `synthetic` | Replace with a plausible format-preserving value | Optional |
+
+The built-in entity catalog covers email, phone, payment card, SSN, IP address, API keys,
+people, organizations, locations, dates, money, URLs, IBANs, US routing numbers, passports,
+driver licenses, and medical licenses.
+
+## Quick start
+
+The local build currently requires Python 3.11+ and Node.js 20+.
+
+```bash
+git clone https://github.com/csnyder256/privacy-gateway.git
+cd privacy-gateway
+python -m venv .venv
+. .venv/bin/activate
+pip install -e '.[dev]'
+
+export PRIVACY_GATEWAY_MASTER_KEY="$(privacy-gateway keygen)"
+privacy-gateway anonymize 'Email me at person@example.com'
+```
+
+For a client-held restoration flow:
+
+```python
+from privacy_gateway.crypto import generate_key
+from privacy_gateway.engine import PrivacyEngine
+from privacy_gateway.vault import Vault
+
+client_key = generate_key()
+gateway = PrivacyEngine(Vault("privacy.db"))
+
+protected = gateway.transform(
+    "Email me at person@example.com",
+    restore_key=client_key,
+)
+
+original = PrivacyEngine.restore_capsule(
+    protected.text,
+    protected.capsule,
+    client_key,
+    protected.session_id,
+)
+```
+
+Open `http://127.0.0.1:8787` after `privacy-gateway serve` for the guided policy builder.
+
+## Trust modes
+
+| Mode | Original values live where? | Best for |
+|---|---|---|
+| Client capsule | Encrypted capsule held by the caller | Browsers, agents, zero-retention gateways |
+| Local encrypted vault | Your SQLite database, encrypted under your key | Desktop tools, single-node services |
+| Self-hosted network vault | Your encrypted gateway database | A trusted private service boundary |
+| One-way | Nowhere; values are redacted, labeled, generalized, or hashed | Irreversible export pipelines |
+
+Read [the threat boundaries](docs/threat-boundaries.md) before selecting a mode. Anonymization
+reduces exposure; it does not make arbitrary data automatically safe or legally anonymous.
+
+## Integrations
+
+| Surface | Package/route | v0.1 behavior |
+|---|---|---|
+| Python | `privacy_gateway` | Sync/async clients plus in-process engine |
+| Browser/Node | `@privacy-gateway/core`, `@privacy-gateway/client` | WebCrypto core and HTTP client |
+| OpenAI | `/proxy/openai/v1` | Responses + Chat Completions, non-streaming JSON |
+| Anthropic | `/proxy/anthropic/v1` | Messages, non-streaming JSON |
+| ASGI | `PrivacyASGIMiddleware` | JSON/text request protection |
+| MCP | `privacy-gateway-mcp` | Five inspection/protection/restoration tools |
+| Webhooks | `WebhookVerifier` | Signed JSON with timestamp/replay checking |
+| CLI | `privacy-gateway` | Serve, anonymize, synthesize, purge, verify |
+
+Unsupported provider paths, malformed shapes, streaming, redirects, or non-JSON responses block
+instead of forwarding the original. Restorable values in tool/side-effect output also block.
+
+## Synthetic structured data
+
+```bash
+privacy-gateway synthesize source.csv synthetic.csv \
+  --rows 1000 \
+  --schema-output schema.json \
+  --report-output report.json
+```
+
+CSV, JSON, and JSONL are supported. Explicit schemas can describe types, nullability, ranges,
+categories, locales, primary keys, and multi-table foreign keys. The clean-room generator has no
+SDV runtime dependency; see [provenance](docs/provenance.md) and
+[limitations](docs/limitations.md).
+
+## Docker
+
+```bash
+export PRIVACY_GATEWAY_MASTER_KEY="$(.venv/bin/privacy-gateway keygen)"
+docker compose up --build
+curl --fail http://127.0.0.1:8787/v1/health
+```
+
+The Compose service binds to loopback, drops capabilities, uses a read-only root filesystem, and
+persists its encrypted SQLite database in a named volume. See [operations](docs/operations.md).
+
+## Presets
+
+Start from `balanced`, `strict`, `healthcare`, `finance`, or `devsecops`, then override any
+rule. Presets are ordinary versioned policies—not hidden behavior.
+
+```python
+from privacy_gateway.models import Action, EntityType
+from privacy_gateway.policies import policy_from_preset
+
+policy = policy_from_preset("balanced")
+email = policy.rule_for(EntityType.EMAIL_ADDRESS)
+email.action = Action.REDACT
+email.reversible = False
+email.minimum_confidence_ppm = 900_000
+```
+
+## Repository map
+
+```text
+src/privacy_gateway/       Python policy, detection, vault, API, CLI, and MCP surfaces
+packages/core/             Portable TypeScript policy and transformation core
+packages/client/           Browser/Node HTTP client
+conformance/               Shared cross-runtime fixtures
+contracts/                 Machine-readable compatibility contract
+docs/                      Architecture, threat model, scope, and provenance
+evaluation/                Invented evaluation cases and guidance
+examples/                  Provider and agent-harness integration examples
+tests/                     Python security and conformance tests
+```
+
+## Verification
+
+```bash
+pytest
+ruff check src tests
+ruff format --check src tests
+npm run check
+npm test
+npm run build
+```
+
+Current local release gate: 107 Python tests and 22 TypeScript tests, plus Python lint/format,
+TypeScript typecheck/build, package build, CLI probes, browser onboarding, and container smoke
+tests. This is not a third-party security certification.
+
+## Design provenance
+
+Privacy Gateway draws architectural lessons from pii-proxy, Anonproxy, prompt-anonymizer,
+Microsoft Presidio, and SDV. See [research verification](docs/research-verification.md) and
+[provenance](docs/provenance.md) for exact revisions and license boundaries. The structured
+synthetic-data work is a clean-room implementation; SDV code is not copied or bundled.
+
+## Security
+
+Please do not report vulnerabilities in public issues. Follow [SECURITY.md](SECURITY.md).
+Start with the [threat model](THREAT-MODEL.md), then review
+[operations](docs/operations.md) and [limitations](docs/limitations.md).
+
+## License
+
+MIT © Cade Snyder. See [LICENSE](LICENSE).

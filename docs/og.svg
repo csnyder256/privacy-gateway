@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Privacy Gateway</title><desc id="desc">Keep sensitive data inside your trust boundary.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#111827"/><stop offset="1" stop-color="#312e81"/></linearGradient><linearGradient id="mark" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b72ff"/><stop offset="1" stop-color="#38d9a9"/></linearGradient></defs>
+  <rect width="1200" height="630" rx="36" fill="url(#bg)"/><circle cx="1060" cy="80" r="260" fill="#6d4aff" opacity=".15"/><circle cx="110" cy="620" r="230" fill="#38d9a9" opacity=".08"/>
+  <rect x="96" y="92" width="92" height="92" rx="26" fill="url(#mark)"/><text x="142" y="151" fill="white" text-anchor="middle" font-family="system-ui,sans-serif" font-size="28" font-weight="800">PG</text>
+  <text x="96" y="277" fill="white" font-family="system-ui,sans-serif" font-size="78" font-weight="800" letter-spacing="-4">Privacy Gateway</text>
+  <text x="96" y="356" fill="#c4b5fd" font-family="system-ui,sans-serif" font-size="37" font-weight="650">Useful data goes out.</text>
+  <text x="96" y="407" fill="#6ee7c2" font-family="system-ui,sans-serif" font-size="37" font-weight="650">Sensitive data stays in.</text>
+  <text x="96" y="520" fill="#aab3c5" font-family="ui-monospace,monospace" font-size="24">detect → policy → transform → restore</text>
+</svg>

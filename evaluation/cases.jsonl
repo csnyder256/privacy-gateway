@@ -1,0 +1,5 @@
+{"id":"email-basic","text":"Contact test.person@example.test","expected":["EMAIL_ADDRESS"]}
+{"id":"card-luhn","text":"Use test card 4111 1111 1111 1111","expected":["CREDIT_CARD"]}
+{"id":"allow-false-positive","text":"Example Corporation","expected":[],"allow_terms":["Example Corporation"]}
+{"id":"overlap-url-email","text":"Open https://example.test/u/test@example.test","expected":["URL"]}
+{"id":"secret-api-key","text":"Fake token sk-example00000000000000000000","expected":["API_KEY"]}

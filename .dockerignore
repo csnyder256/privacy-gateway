@@ -1,0 +1,12 @@
+.git
+.github
+.venv
+node_modules
+packages
+tests
+docs
+conformance
+contracts
+data
+*.db*
+.env*

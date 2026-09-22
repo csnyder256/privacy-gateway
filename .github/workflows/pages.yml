@@ -1,0 +1,40 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/privacy_gateway/static/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Assemble site artifact
+        run: |
+          mkdir -p _site/assets
+          cp src/privacy_gateway/static/index.html _site/index.html
+          cp src/privacy_gateway/static/app.css _site/assets/app.css
+          cp src/privacy_gateway/static/app.js _site/assets/app.js
+          cp src/privacy_gateway/static/favicon.svg _site/assets/favicon.svg
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a reproducible defect using invented data only.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include real personal data, credentials, or security vulnerabilities.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Integration surface
+      options:
+        - Python core or client
+        - TypeScript core or client
+        - HTTP API or proxy
+        - CLI or MCP
+        - Structured synthesis
+        - Onboarding or documentation
+        - Container or release
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction with invented values
+      description: Include the smallest commands, policy, and fake input that reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Data hygiene
+      options:
+        - label: I used only invented data and removed keys, tokens, and credentials.
+          required: true
+        - label: This is not a security vulnerability; those are reported privately.
+          required: true
