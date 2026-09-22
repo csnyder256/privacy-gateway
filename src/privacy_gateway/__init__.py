@@ -16,4 +16,4 @@ __all__ = [
     "PrivacyGatewayError",
     "policy_from_preset",
 ]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

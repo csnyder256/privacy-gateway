@@ -37,7 +37,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
     engine = PrivacyEngine(vault)
     app = FastAPI(
         title="Privacy Gateway",
-        version="0.1.0",
+        version="0.2.0",
         description="Policy-controlled PII anonymization, tagging, auditing, and reversible restoration.",
     )
     app.state.vault = vault
@@ -47,7 +47,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
     def health():
         return {
             "ok": True,
-            "version": "0.1.0",
+            "version": "0.2.0",
             "persistent_restoration": vault.master_key is not None,
         }
 
