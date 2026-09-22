@@ -296,3 +296,18 @@ class Vault:
                 cursor = connection.execute(f"DELETE FROM {table} WHERE expires_at<=?", (now,))
                 deleted[table] = cursor.rowcount
         return deleted
+
+
+def open_vault(target: str | Path, master_key: bytes | None = None):
+    """Return a storage backend for ``target``.
+
+    A ``postgres://`` or ``postgresql://`` URL selects the optional PostgreSQL backend;
+    anything else is treated as a SQLite file path. Both backends expose the same API, so
+    the gateway can slot into an existing database without code changes.
+    """
+    text = str(target)
+    if text.startswith(("postgres://", "postgresql://")):
+        from .pg_vault import PostgresVault
+
+        return PostgresVault(text, master_key=master_key)
+    return Vault(target, master_key=master_key)

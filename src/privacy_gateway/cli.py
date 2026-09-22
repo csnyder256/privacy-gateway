@@ -19,7 +19,7 @@ from .synthetic import (
     synthesize_table,
     write_rows,
 )
-from .vault import Vault
+from .vault import Vault, open_vault
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -28,7 +28,7 @@ app = typer.Typer(
 
 
 def _engine(database: str) -> PrivacyEngine:
-    return PrivacyEngine(Vault(database, master_key=key_from_env()))
+    return PrivacyEngine(open_vault(database, master_key=key_from_env()))
 
 
 @app.command()

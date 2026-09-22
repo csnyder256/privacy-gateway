@@ -28,12 +28,12 @@ from .models import (
     TransformResponse,
 )
 from .policies import PRESETS
-from .vault import Vault
+from .vault import open_vault
 
 
 def create_app(database_path: str | None = None) -> FastAPI:
     data_path = database_path or os.getenv("PRIVACY_GATEWAY_DB", "./data/privacy-gateway.db")
-    vault = Vault(data_path, master_key=key_from_env())
+    vault = open_vault(data_path, master_key=key_from_env())
     engine = PrivacyEngine(vault)
     app = FastAPI(
         title="Privacy Gateway",

@@ -7,7 +7,7 @@ import os
 from .crypto import key_from_env
 from .engine import PrivacyEngine
 from .models import Policy
-from .vault import Vault
+from .vault import open_vault
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
         raise SystemExit("Install the MCP extra: pip install 'privacy-gateway[mcp]'") from exc
 
     engine = PrivacyEngine(
-        Vault(os.getenv("PRIVACY_GATEWAY_DB", "./data/privacy-gateway.db"), key_from_env())
+        open_vault(os.getenv("PRIVACY_GATEWAY_DB", "./data/privacy-gateway.db"), key_from_env())
     )
     mcp = FastMCP("Privacy Gateway")
 

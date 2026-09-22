@@ -117,6 +117,17 @@ Open `http://127.0.0.1:8787` after `privacy-gateway serve` for the guided policy
 Read [the threat boundaries](docs/threat-boundaries.md) before selecting a mode. Anonymization
 reduces exposure; it does not make arbitrary data automatically safe or legally anonymous.
 
+## Storage backends
+
+The vault slots into whatever database you already run. By default it uses a local SQLite file;
+point `PRIVACY_GATEWAY_DB` (or the `serve --database` flag) at a `postgresql://` URL to use
+PostgreSQL instead, with `pip install 'privacy-gateway[postgres]'`. Both backends share the same
+encrypted, expiry-enforcing schema, so nothing else changes.
+
+```bash
+export PRIVACY_GATEWAY_DB="postgresql://user:pass@db.internal:5432/privacy"
+```
+
 ## Integrations
 
 | Surface | Package/route | v0.1 behavior |

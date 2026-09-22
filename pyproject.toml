@@ -23,6 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 presidio = ["presidio-analyzer>=2.2.355", "presidio-anonymizer>=2.2.355"]
 mcp = ["mcp>=1.2,<2"]
+postgres = ["psycopg[binary]>=3.1"]
 dev = ["pytest>=8.3", "pytest-cov>=5.0", "ruff>=0.6"]
 
 [project.scripts]

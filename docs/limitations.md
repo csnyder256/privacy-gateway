@@ -10,8 +10,9 @@
 - The TypeScript core is in-process/browser capable but does not persist a local audit database.
 - OpenAI/Anthropic proxies support non-streaming JSON only. Tool/side-effect fields containing a
   restorable surrogate are rejected rather than automatically restored.
-- v0.1 ships encrypted single-operator SQLite storage, not PostgreSQL or an authenticated
-  multi-tenant managed service.
+- v0.1 ships encrypted single-operator storage on SQLite (default) or PostgreSQL, selected by
+  the database URL. It is not an authenticated multi-tenant managed service and does not
+  implement row-level tenant isolation.
 - Synthetic data preserves declared types, ranges, null rates, categories, relationships, and
   coarse aggregates. It is not differential privacy and can still be unsafe for release without
   reviewing its privacy report and domain-specific risks.
