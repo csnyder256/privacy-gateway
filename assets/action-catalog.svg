@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 610" role="img" aria-labelledby="title desc">
+  <title id="title">Privacy Gateway action catalog</title>
+  <desc id="desc">A table showing seven explicit transformation actions, their output, and whether restoration is possible.</desc>
+  <style>
+    .paper{fill:#f5f1e8}.ink{fill:#171612}.muted{fill:#716d65}.rule{stroke:#c8c1b3;stroke-width:2}
+    .k{font:600 16px ui-monospace,monospace;letter-spacing:2px}.h{font:700 31px system-ui,sans-serif}.a{font:700 21px system-ui,sans-serif}.d{font:16px system-ui,sans-serif}.m{font:15px ui-monospace,monospace}
+  </style>
+  <rect class="paper" width="1200" height="610"/>
+  <rect x="64" y="56" width="12" height="31" fill="#f25c19"/>
+  <text x="96" y="79" class="k ink">02  TRANSFORMATION CATALOG</text>
+  <text x="64" y="136" class="h ink">Every sensitive value gets an explicit policy action.</text>
+  <text x="64" y="170" class="d muted">The policy says what changes, whether it can be restored, and under which key custody.</text>
+  <rect x="64" y="215" width="1072" height="48" fill="#171612"/>
+  <text x="90" y="246" class="k" fill="#f5f1e8">ACTION</text><text x="360" y="246" class="k" fill="#f5f1e8">OUTPUT</text><text x="745" y="246" class="k" fill="#f5f1e8">RESTORATION</text>
+  <g class="rule">
+    <line x1="64" y1="315" x2="1136" y2="315"/><line x1="64" y1="365" x2="1136" y2="365"/><line x1="64" y1="415" x2="1136" y2="415"/><line x1="64" y1="465" x2="1136" y2="465"/><line x1="64" y1="515" x2="1136" y2="515"/><line x1="64" y1="565" x2="1136" y2="565"/>
+  </g>
+  <rect x="64" y="263" width="12" height="302" fill="#f25c19"/>
+  <g class="a ink"><text x="90" y="297">redact</text><text x="90" y="347">label</text><text x="90" y="397">hash</text><text x="90" y="447">generalize</text><text x="90" y="497">synthetic</text><text x="90" y="547">tokenize</text><text x="90" y="597">keep</text></g>
+  <g class="d muted"><text x="360" y="297">Typed redaction marker</text><text x="360" y="347">Entity category</text><text x="360" y="397">One-way digest</text><text x="360" y="447">Less precision, for example date → year</text><text x="360" y="497">Plausible format-preserving value</text><text x="360" y="547">Authenticated opaque token</text><text x="360" y="597">Original value unchanged</text></g>
+  <g class="m ink"><text x="745" y="297">NOT REVERSIBLE</text><text x="745" y="347">NOT REVERSIBLE</text><text x="745" y="397">NOT REVERSIBLE</text><text x="745" y="447">OPTIONAL</text><text x="745" y="497">OPTIONAL</text><text x="745" y="547">REVERSIBLE</text><text x="745" y="597">NOT REVERSIBLE</text></g>
+  <g fill="#9ab59d"><circle cx="1045" cy="292" r="8"/><circle cx="1045" cy="342" r="8"/><circle cx="1045" cy="392" r="8"/><circle cx="1045" cy="442" r="8"/><circle cx="1045" cy="492" r="8"/><circle cx="1045" cy="542" r="8"/><circle cx="1045" cy="592" r="8"/></g>
+</svg>

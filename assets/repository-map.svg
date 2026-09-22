@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 545" role="img" aria-labelledby="title desc">
+  <title id="title">Privacy Gateway repository map</title>
+  <desc id="desc">A repository tree centered on the Python runtime, TypeScript packages, compatibility contracts, documentation, examples, and tests.</desc>
+  <style>
+    .paper{fill:#f5f1e8}.ink{fill:#171612}.muted{fill:#716d65}.line{stroke:#9d978c;stroke-width:2;stroke-dasharray:6 7;fill:none}
+    .k{font:600 16px ui-monospace,monospace;letter-spacing:2px}.h{font:700 29px system-ui,sans-serif}.a{font:700 18px system-ui,sans-serif}.d{font:15px system-ui,sans-serif}.m{font:14px ui-monospace,monospace}
+  </style>
+  <rect class="paper" width="1200" height="545"/>
+  <rect x="64" y="56" width="12" height="31" fill="#f25c19"/><text x="96" y="79" class="k ink">05  REPOSITORY MAP</text>
+  <text x="64" y="136" class="h ink">A compact core with explicit compatibility edges.</text>
+  <rect x="432" y="214" width="336" height="102" rx="8" fill="#171612"/><text x="458" y="252" class="m" fill="#c8c1b3">src/privacy_gateway/</text><text x="458" y="287" class="a" fill="#f5f1e8">Python runtime + policy engine</text>
+  <path d="M432 265H320V201H270M432 265H320V394H270M768 265H880V201H930M768 265H880V394H930" class="line"/>
+  <g fill="#ebe5d9" stroke="#171612" stroke-width="2"><rect x="64" y="154" width="206" height="94" rx="6"/><rect x="64" y="347" width="206" height="94" rx="6"/><rect x="930" y="154" width="206" height="94" rx="6"/><rect x="930" y="347" width="206" height="94" rx="6"/></g>
+  <g class="m muted"><text x="86" y="187">packages/</text><text x="86" y="380">conformance/ + contracts/</text><text x="952" y="187">docs/ + examples/</text><text x="952" y="380">tests/ + evaluation/</text></g>
+  <g class="a ink"><text x="86" y="219">Portable TypeScript</text><text x="86" y="412">Shared fixtures</text><text x="952" y="219">Operations + guidance</text><text x="952" y="412">Evidence + cases</text></g>
+  <text x="64" y="500" class="d muted">Policy models and test fixtures keep the Python and TypeScript implementations aligned.</text>
+</svg>

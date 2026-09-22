@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
+  <title id="title">Privacy Gateway boundary flow</title>
+  <desc id="desc">A diagram showing raw input enter Privacy Gateway, policy-controlled transformation within the local trust boundary, and only protected output crossing to an external system.</desc>
+  <style>
+    .paper{fill:#f5f1e8}.ink{fill:#171612}.muted{fill:#716d65}.line{stroke:#171612;stroke-width:3;fill:none}.dash{stroke:#9d978c;stroke-width:2;stroke-dasharray:7 8;fill:none}
+    .k{font:600 16px ui-monospace,monospace;letter-spacing:2px}.h{font:700 27px system-ui,sans-serif}.a{font:700 20px system-ui,sans-serif}.d{font:16px system-ui,sans-serif}.m{font:14px ui-monospace,monospace}
+  </style>
+  <rect class="paper" width="1200" height="540"/>
+  <rect x="64" y="56" width="12" height="31" fill="#f25c19"/>
+  <text x="96" y="79" class="k ink">01  TRUST BOUNDARY</text>
+  <text x="64" y="134" class="h ink">Inspect before the boundary. Release only protected output.</text>
+  <text x="64" y="167" class="d muted">The gateway is a policy checkpoint, not a pass-through proxy.</text>
+  <path d="M282 307H428" class="line"/><path d="M772 307H918" class="line"/>
+  <polygon points="428,307 414,298 414,316" fill="#171612"/><polygon points="918,307 904,298 904,316" fill="#171612"/>
+  <rect x="64" y="238" width="218" height="138" rx="6" fill="#ebe5d9" stroke="#171612" stroke-width="2"/>
+  <text x="88" y="273" class="k muted">YOUR STACK</text><text x="88" y="315" class="a ink">Application</text><text x="88" y="345" class="d muted">API · agent · pipeline</text>
+  <rect x="428" y="203" width="344" height="208" rx="8" fill="#171612"/>
+  <rect x="428" y="203" width="12" height="208" fill="#f25c19"/>
+  <text x="470" y="243" class="k" fill="#ebe5d9">PRIVACY GATEWAY</text><text x="470" y="287" class="a" fill="#f5f1e8">detect → policy → transform</text>
+  <line x1="470" y1="315" x2="728" y2="315" stroke="#716d65"/><text x="470" y="349" class="m" fill="#9ab59d">PROTECTED PAYLOAD ONLY</text><text x="470" y="379" class="m" fill="#c8c1b3">FAIL CLOSED ON INSPECTION FAILURE</text>
+  <rect x="918" y="238" width="218" height="138" rx="6" fill="#ebe5d9" stroke="#171612" stroke-width="2"/>
+  <text x="942" y="273" class="k muted">OUTSIDE</text><text x="942" y="315" class="a ink">External system</text><text x="942" y="345" class="d muted">model · API · webhook</text>
+  <path d="M600 431C600 492 172 492 172 400" class="dash"/><path d="M600 431C600 492 1028 492 1028 400" class="dash"/>
+  <rect x="448" y="462" width="304" height="44" rx="4" fill="#f5f1e8" stroke="#716d65" stroke-width="2"/>
+  <text x="474" y="490" class="m ink">RESTORE: CLIENT CAPSULE / VAULT</text>
+</svg>

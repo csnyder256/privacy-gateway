@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">Privacy Gateway integration surfaces</title>
+  <desc id="desc">A hub and spoke diagram connecting Privacy Gateway with application SDKs, provider proxies, server middleware, automation, and command line tooling.</desc>
+  <style>
+    .paper{fill:#f5f1e8}.ink{fill:#171612}.muted{fill:#716d65}.line{stroke:#9d978c;stroke-width:2;stroke-dasharray:6 7;fill:none}
+    .k{font:600 16px ui-monospace,monospace;letter-spacing:2px}.h{font:700 29px system-ui,sans-serif}.a{font:700 18px system-ui,sans-serif}.d{font:15px system-ui,sans-serif}.m{font:14px ui-monospace,monospace}
+  </style>
+  <rect class="paper" width="1200" height="560"/>
+  <rect x="64" y="56" width="12" height="31" fill="#f25c19"/><text x="96" y="79" class="k ink">04  INTEGRATION SURFACES</text>
+  <text x="64" y="136" class="h ink">One policy boundary, close to every integration point.</text>
+  <path d="M435 312C360 312 360 226 292 226M435 312C360 312 360 404 292 404M765 312C840 312 840 226 908 226M765 312C840 312 840 404 908 404" class="line"/>
+  <rect x="435" y="230" width="330" height="164" rx="8" fill="#171612"/><rect x="435" y="230" width="12" height="164" fill="#f25c19"/>
+  <text x="477" y="274" class="k" fill="#ebe5d9">PRIVACY GATEWAY</text><text x="477" y="318" class="a" fill="#f5f1e8">policy-controlled</text><text x="477" y="346" class="a" fill="#f5f1e8">transformation layer</text><text x="477" y="373" class="m" fill="#9ab59d">ONE CONSISTENT CONTRACT</text>
+  <g fill="#ebe5d9" stroke="#171612" stroke-width="2"><rect x="64" y="172" width="228" height="108" rx="6"/><rect x="64" y="350" width="228" height="108" rx="6"/><rect x="908" y="172" width="228" height="108" rx="6"/><rect x="908" y="350" width="228" height="108" rx="6"/></g>
+  <g class="a ink"><text x="88" y="211">Application SDKs</text><text x="88" y="389">Server boundary</text><text x="932" y="211">Provider proxies</text><text x="932" y="389">Automation + CLI</text></g>
+  <g class="m muted"><text x="88" y="246">Python · Browser · Node</text><text x="88" y="424">ASGI middleware</text><text x="932" y="246">OpenAI · Anthropic</text><text x="932" y="424">MCP · webhooks · CLI</text></g>
+  <text x="64" y="517" class="d muted">Unsupported shapes, streaming, redirects, and non-JSON responses block instead of forwarding originals.</text>
+</svg>

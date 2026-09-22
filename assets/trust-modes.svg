@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Privacy Gateway trust modes</title>
+  <desc id="desc">A comparison table of client capsule, local vault, network vault, and one-way trust modes.</desc>
+  <style>
+    .paper{fill:#f5f1e8}.ink{fill:#171612}.muted{fill:#716d65}.rule{stroke:#c8c1b3;stroke-width:2}
+    .k{font:600 16px ui-monospace,monospace;letter-spacing:2px}.h{font:700 30px system-ui,sans-serif}.a{font:700 19px system-ui,sans-serif}.d{font:15px system-ui,sans-serif}.m{font:14px ui-monospace,monospace}
+  </style>
+  <rect class="paper" width="1200" height="520"/>
+  <rect x="64" y="56" width="12" height="31" fill="#f25c19"/><text x="96" y="79" class="k ink">03  KEY CUSTODY</text>
+  <text x="64" y="136" class="h ink">Choose where original values may live.</text><text x="64" y="170" class="d muted">Residency is explicit in the mode—not an implementation detail.</text>
+  <rect x="64" y="216" width="1072" height="50" fill="#171612"/>
+  <text x="88" y="247" class="k" fill="#f5f1e8">MODE</text><text x="365" y="247" class="k" fill="#f5f1e8">ORIGINAL VALUES</text><text x="720" y="247" class="k" fill="#f5f1e8">BEST FIT</text>
+  <g class="rule"><line x1="64" y1="329" x2="1136" y2="329"/><line x1="64" y1="392" x2="1136" y2="392"/><line x1="64" y1="455" x2="1136" y2="455"/></g>
+  <rect x="64" y="266" width="12" height="189" fill="#f25c19"/>
+  <g class="a ink"><text x="88" y="305">Client capsule</text><text x="88" y="368">Local vault</text><text x="88" y="431">Network vault</text><text x="88" y="494">One-way</text></g>
+  <g class="d muted"><text x="365" y="305">Encrypted capsule held by caller</text><text x="365" y="368">SQLite, encrypted under your key</text><text x="365" y="431">Encrypted gateway database</text><text x="365" y="494">Nowhere</text></g>
+  <g class="d ink"><text x="720" y="305">Browsers, agents, zero retention</text><text x="720" y="368">Desktop tools, single-node services</text><text x="720" y="431">Trusted private service boundary</text><text x="720" y="494">Irreversible export pipelines</text></g>
+</svg>

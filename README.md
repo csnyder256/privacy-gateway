@@ -7,6 +7,8 @@
 Local-first PII detection, policy-controlled anonymization, encrypted reversible mappings,
 and client-held restoration for applications, APIs, and AI agents.
 
+![Privacy Gateway — useful data goes out; sensitive data stays in](assets/privacy-gateway-social-preview.png)
+
 [![CI](https://img.shields.io/github/actions/workflow/status/csnyder256/privacy-gateway/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/csnyder256/privacy-gateway/actions)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -28,13 +30,9 @@ and client-held restoration for applications, APIs, and AI agents.
 ## Why Privacy Gateway
 
 AI and data pipelines routinely cross trust boundaries. Privacy Gateway places a small,
-source-agnostic control plane in front of those boundaries:
+source-agnostic control plane in front of those boundaries.
 
-```text
-your application → detect → policy → transform → external system
-       ↑                                               ↓
-       └──────── client-side or encrypted restore ─────┘
-```
+![Privacy Gateway boundary flow: inspect locally, apply policy, and release protected output](assets/privacy-gateway-flow.svg)
 
 - **Choose exactly what changes.** Every entity type gets its own action, confidence floor,
   scope, locale, and reversibility setting; mapping and audit retention are policy-wide.
@@ -51,15 +49,7 @@ your application → detect → policy → transform → external system
 
 ## Actions
 
-| Action | Result | Reversible |
-|---|---|---:|
-| `keep` | Leave the value unchanged | No |
-| `redact` | Replace with a typed redaction marker | No |
-| `label` | Replace with an entity label | No |
-| `tokenize` | Replace with an authenticated opaque token | Yes |
-| `hash` | Replace with a one-way digest | No |
-| `generalize` | Reduce precision, such as a date to a year | Optional |
-| `synthetic` | Replace with a plausible format-preserving value | Optional |
+![Table of Privacy Gateway transformation actions, outputs, and restoration behavior](assets/action-catalog.svg)
 
 The built-in entity catalog covers email, phone, payment card, SSN, IP address, API keys,
 people, organizations, locations, dates, money, URLs, IBANs, US routing numbers, passports,
@@ -105,14 +95,11 @@ original = PrivacyEngine.restore_capsule(
 
 Open `http://127.0.0.1:8787` after `privacy-gateway serve` for the guided policy builder.
 
+![Animated local protection flow: raw values are inspected, transformed by policy, and released as protected output](assets/privacy-boundary-loop.gif)
+
 ## Trust modes
 
-| Mode | Original values live where? | Best for |
-|---|---|---|
-| Client capsule | Encrypted capsule held by the caller | Browsers, agents, zero-retention gateways |
-| Local encrypted vault | Your SQLite database, encrypted under your key | Desktop tools, single-node services |
-| Self-hosted network vault | Your encrypted gateway database | A trusted private service boundary |
-| One-way | Nowhere; values are redacted, labeled, generalized, or hashed | Irreversible export pipelines |
+![Comparison table of Privacy Gateway trust modes and original-value residency](assets/trust-modes.svg)
 
 Read [the threat boundaries](docs/threat-boundaries.md) before selecting a mode. Anonymization
 reduces exposure; it does not make arbitrary data automatically safe or legally anonymous.
@@ -130,16 +117,7 @@ export PRIVACY_GATEWAY_DB="postgresql://user:pass@db.internal:5432/privacy"
 
 ## Integrations
 
-| Surface | Package/route | v0.1 behavior |
-|---|---|---|
-| Python | `privacy_gateway` | Sync/async clients plus in-process engine |
-| Browser/Node | `@privacy-gateway/core`, `@privacy-gateway/client` | WebCrypto core and HTTP client |
-| OpenAI | `/proxy/openai/v1` | Responses + Chat Completions, non-streaming JSON |
-| Anthropic | `/proxy/anthropic/v1` | Messages, non-streaming JSON |
-| ASGI | `PrivacyASGIMiddleware` | JSON/text request protection |
-| MCP | `privacy-gateway-mcp` | Five inspection/protection/restoration tools |
-| Webhooks | `WebhookVerifier` | Signed JSON with timestamp/replay checking |
-| CLI | `privacy-gateway` | Serve, anonymize, synthesize, purge, verify |
+![Diagram of Privacy Gateway integration surfaces](assets/integrations.svg)
 
 Unsupported provider paths, malformed shapes, streaming, redirects, or non-JSON responses block
 instead of forwarding the original. Restorable values in tool/side-effect output also block.
@@ -187,17 +165,7 @@ email.minimum_confidence_ppm = 900_000
 
 ## Repository map
 
-```text
-src/privacy_gateway/       Python policy, detection, vault, API, CLI, and MCP surfaces
-packages/core/             Portable TypeScript policy and transformation core
-packages/client/           Browser/Node HTTP client
-conformance/               Shared cross-runtime fixtures
-contracts/                 Machine-readable compatibility contract
-docs/                      Architecture, threat model, scope, and provenance
-evaluation/                Invented evaluation cases and guidance
-examples/                  Provider and agent-harness integration examples
-tests/                     Python security and conformance tests
-```
+![Diagram of Privacy Gateway repository structure](assets/repository-map.svg)
 
 ## Verification
 
