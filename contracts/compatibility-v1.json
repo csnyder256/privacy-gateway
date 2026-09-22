@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "unicode_version": "15.1.0",
+  "wire_encoding": "UTF-8",
+  "offset_unit": "original_utf8_byte_half_open",
+  "canonical_json": "RFC8785",
+  "crypto": {
+    "hpke": {
+      "rfc": 9180,
+      "mode": 0,
+      "kem_id": "0x0020",
+      "kdf_id": "0x0001",
+      "aead_id": "0x0002",
+      "info_prefix": "privacy-gateway-hpke-v1",
+      "ack_export_context": "privacy-gateway-ack-v1"
+    },
+    "hkdf_labels": [
+      "value-encryption", "mapping-match", "mapping-generation",
+      "policy-value-encryption", "policy-match-commitment",
+      "audit-metadata-encryption", "audit-integrity", "audit-blind-index",
+      "capsule-encryption", "capability-store-integrity", "project-store-encryption",
+      "synthesis-spill-encryption"
+    ],
+    "hkdf_owner_types": ["client_profile", "server_tenant"],
+    "hkdf_seed_scope_types": ["session", "policy_version", "project_store", "synthesis_spill"],
+    "hkdf_legal_tuples": {
+      "session": ["value-encryption", "mapping-match", "mapping-generation", "audit-metadata-encryption", "audit-integrity", "audit-blind-index", "capsule-encryption", "capability-store-integrity"],
+      "policy_version": ["policy-value-encryption", "policy-match-commitment", "audit-metadata-encryption", "audit-integrity", "audit-blind-index"],
+      "project_store": ["project-store-encryption"],
+      "synthesis_spill": ["synthesis-spill-encryption"]
+    },
+    "hkdf_id_encoding": "base64url_no_padding_16_random_bytes",
+    "hkdf_output_bytes": 32
+  },
+  "entities": [
+    "EMAIL_ADDRESS", "PHONE_NUMBER", "CREDIT_CARD", "US_SSN", "IP_ADDRESS",
+    "API_KEY", "PERSON", "ORGANIZATION", "LOCATION", "DATE_TIME", "MONEY",
+    "URL", "IBAN_CODE", "US_BANK_NUMBER", "PASSPORT", "DRIVER_LICENSE",
+    "MEDICAL_LICENSE"
+  ],
+  "actions": {
+    "keep": {"reversible": false},
+    "redact": {"reversible": false},
+    "label": {"reversible": false},
+    "tokenize": {"reversible": true},
+    "hash": {"reversible": false},
+    "generalize": {"reversible": "optional_with_mapping"},
+    "synthetic": {"reversible": "optional_with_mapping"}
+  },
+  "locales": ["en-US", "es-ES", "de-DE", "fr-FR"],
+  "locale_formats": {
+    "en-US": {"country_calling_code": "1", "national_phone_digits": 10, "date": "MM/DD/YYYY", "currency_symbol": "$", "currency": "USD", "thousands": ",", "decimal": "."},
+    "es-ES": {"country_calling_code": "34", "national_phone_digits": 9, "date": "DD/MM/YYYY", "currency_symbol": "€", "currency": "EUR", "thousands": ".", "decimal": ","},
+    "de-DE": {"country_calling_code": "49", "national_phone_digits": 10, "date": "DD.MM.YYYY", "currency_symbol": "€", "currency": "EUR", "thousands": ".", "decimal": ","},
+    "fr-FR": {"country_calling_code": "33", "national_phone_digits": 9, "date": "DD/MM/YYYY", "currency_symbol": "€", "currency": "EUR", "thousands": " ", "decimal": ","}
+  },
+  "deterministic_recognizers": {
+    "api_key_families": {
+      "openai_style": "sk-[A-Za-z0-9_-]{16,200}",
+      "github_classic": "gh[pousr]_[A-Za-z0-9]{20,255}",
+      "aws_access_key_id": "AKIA[A-Z0-9]{16}"
+    },
+    "iban_country_lengths": {"DE": 22, "ES": 24, "FR": 27, "GB": 22},
+    "url": "absolute ASCII http or https URI with nonempty host; userinfo rejected"
+  },
+  "preset_overrides": {
+    "balanced": {
+      "API_KEY": "redact", "DATE_TIME": "generalize", "MONEY": "generalize",
+      "URL": "keep"
+    },
+    "strict": {
+      "API_KEY": "redact", "CREDIT_CARD": "redact", "US_SSN": "redact",
+      "IBAN_CODE": "redact", "US_BANK_NUMBER": "redact", "PASSPORT": "redact",
+      "DRIVER_LICENSE": "redact", "MEDICAL_LICENSE": "redact"
+    },
+    "healthcare": {
+      "API_KEY": "redact", "CREDIT_CARD": "redact", "US_SSN": "redact",
+      "IBAN_CODE": "redact", "US_BANK_NUMBER": "redact", "PASSPORT": "redact",
+      "DRIVER_LICENSE": "redact", "MEDICAL_LICENSE": "redact",
+      "PERSON": "synthetic", "LOCATION": "synthetic", "DATE_TIME": "synthetic"
+    },
+    "finance": {
+      "API_KEY": "redact", "US_SSN": "redact", "PASSPORT": "redact",
+      "DRIVER_LICENSE": "redact", "MEDICAL_LICENSE": "redact",
+      "CREDIT_CARD": "tokenize", "IBAN_CODE": "tokenize",
+      "US_BANK_NUMBER": "tokenize", "MONEY": "synthetic"
+    },
+    "devsecops": {
+      "API_KEY": "redact", "EMAIL_ADDRESS": "tokenize",
+      "PHONE_NUMBER": "tokenize", "IP_ADDRESS": "tokenize", "PERSON": "keep",
+      "ORGANIZATION": "keep", "LOCATION": "keep", "DATE_TIME": "keep",
+      "MONEY": "keep", "URL": "keep"
+    }
+  },
+  "preset_reversible_overrides": {
+    "healthcare": {"PERSON": true, "LOCATION": true, "DATE_TIME": true}
+  },
+  "reversibility_defaults": {
+    "keep": false, "redact": false, "label": false, "tokenize": true,
+    "hash": false, "generalize": false, "synthetic": false
+  },
+  "preset_default_action": "tokenize",
+  "precedence": [
+    "malformed_blocks", "deny_list", "scope_filter", "allow_list",
+    "required_detector_health", "minimum_confidence", "policy_priority",
+    "confidence_ppm_desc", "byte_length_desc", "start_byte_asc",
+    "entity_asc", "detector_id_asc"
+  ],
+  "tolerant_restoration": {
+    "canonicalizer_version": 1,
+    "tagged_tokens": ["ascii_fixed_literal_case", "one_ascii_space_each_delimiter_side"],
+    "PHONE_NUMBER": ["ascii_plus_digits_space_hyphen_dot_balanced_parentheses", "e164_8_to_15_digits_or_locale_fixture"],
+    "CREDIT_CARD": ["compact_13_to_19_or_uniform_groups_4_plus_final_1_to_4", "single_space_or_hyphen_not_mixed", "luhn"],
+    "US_SSN": ["compact_or_AAA_GG_SSSS_single_uniform_separator", "reject_area_000_666_900_to_999_group_00_serial_0000"],
+    "IBAN_CODE": ["space", "ascii_case"],
+    "US_BANK_NUMBER": ["compact_or_AAA_AAA_AAA_single_uniform_space_or_hyphen", "aba_checksum"],
+    "EMAIL_ADDRESS": ["ascii_dot_atom_local_exact_codepoints_max64", "domain_two_or_more_ldh_labels_each_max63_total_max253", "domain_ascii_case_only"],
+    "DATE_TIME": ["iso_ymd", "en-US_mdy_slash", "es-ES_fr-FR_dmy_slash", "de-DE_dmy_dot", "gregorian_valid"],
+    "MONEY": ["optional_leading_minus_no_plus_parentheses_exponent_or_outer_space", "iso_prefix_one_space_ungrouped_dot_two_minor", "locale_exact_symbol_position_group_and_decimal_two_minor", "no_multidigit_leading_zero", "canonical_iso4217_signed_minor_integer"],
+    "arbitrary_edit_distance": false
+  },
+  "tagged_token": {
+    "exact_surface": "[[PG1|ENTITY|GENERATION|AUTH]]",
+    "generation": "base32_upper_no_padding(16_random_bytes)_26_chars",
+    "auth": "base32_upper_no_padding(first_10_bytes_hmac_sha256_mapping_generation_key)_16_chars",
+    "tolerance": "ascii_case_plus_zero_or_one_ascii_space_around_pipes_and_inside_brackets"
+  },
+  "adapters": {
+    "path_syntax": "PGPath-v1",
+    "path_wildcard": "whole_segment_array_element_only",
+    "text_path_node_type": "string_leaf_only_dedupe_concrete_pointer_once",
+    "blocked_path_node_type": "any_recursive_scan_no_restore",
+    "sse_max_joined_event_data_bytes": 1048576,
+    "sse_max_stream_input_bytes": 16777216,
+    "openai": {
+      "snapshot": "2026-09-21",
+      "endpoints": {
+        "/v1/responses": {
+          "methods": ["POST"],
+          "request_text_pointers": ["/instructions", "/input", "/input/*/content/*/text"],
+          "response_text_pointers": ["/output/*/content/*/text"],
+          "blocked_side_effect_pointers": ["/output/*/arguments", "/output/*/content/*/arguments"],
+          "transports": ["json", "sse"],
+          "sse_events": {
+            "delta": "response.output_text.delta:/delta",
+            "terminal": "response.completed",
+            "terminal_errors": ["response.failed", "error"]
+          }
+        },
+        "/v1/chat/completions": {
+          "methods": ["POST"],
+          "request_text_pointers": ["/messages/*/content", "/messages/*/content/*/text"],
+          "response_text_pointers": ["/choices/*/message/content", "/choices/*/delta/content"],
+          "blocked_side_effect_pointers": ["/choices/*/message/tool_calls/*/function/arguments", "/choices/*/delta/tool_calls/*/function/arguments"],
+          "transports": ["json", "sse"],
+          "sse_events": {
+            "delta": "data_json_manifest_paths",
+            "terminal": "[DONE]",
+            "terminal_errors": ["error_object"]
+          }
+        }
+      }
+    },
+    "anthropic": {
+      "snapshot": "2026-09-21",
+      "endpoints": {
+        "/v1/messages": {
+          "methods": ["POST"],
+          "request_text_pointers": ["/system", "/system/*/text", "/messages/*/content", "/messages/*/content/*/text"],
+          "response_text_pointers": ["/content/*/text"],
+          "blocked_side_effect_pointers": ["/content/*/input"],
+          "transports": ["json", "sse"],
+          "sse_events": {
+            "delta": "content_block_delta:/delta/text",
+            "terminal": "message_stop",
+            "terminal_errors": ["error"]
+          }
+        }
+      }
+    },
+    "middleware": {
+      "python": ["asgi_json", "asgi_utf8_text"],
+      "typescript": ["fetch_json", "fetch_utf8_text"]
+    },
+    "webhook": {
+      "content_types": ["application/json"],
+      "headers": {
+        "timestamp": "X-Privacy-Gateway-Timestamp",
+        "delivery": "X-Privacy-Gateway-Delivery",
+        "key_id": "X-Privacy-Gateway-Key-Id",
+        "signature": "X-Privacy-Gateway-Signature"
+      },
+      "timestamp": "unsigned_decimal_epoch_seconds_no_leading_zero",
+      "delivery": "lowercase_canonical_uuid_v4",
+      "key_id": "ASCII_[A-Za-z0-9._-]_length_1_to_64",
+      "key_bytes": 32,
+      "signature": "v1=lowercase_hex(HMAC-SHA-256(key, timestamp_ascii + '.' + delivery_uuid_ascii + '.' + raw_body))",
+      "replay_window_seconds_exclusive": 300,
+      "delivery_retention_deadline": "signed_timestamp_plus_replay_window",
+      "unique_delivery_id_required": true,
+      "clock": "authenticated_effective_now",
+      "key_states": {"sign": ["active"], "verify": ["active", "retired"], "reject": ["revoked"]}
+    },
+    "mcp_tools": [
+      "protect_text", "protect_json", "restore_client_text", "inspect_policy",
+      "verify_round_trip"
+    ]
+  },
+  "privacy_risk": {
+    "attacker": "configured_quasi_identifiers_with_optional_real_holdout",
+    "sets": {"R": "real_training", "H": "schema_compatible_real_holdout", "S": "synthetic"},
+    "included_columns": "all_shared_columns_excluding_primary_and_foreign_keys",
+    "evaluation_columns": "nonempty_explicit_ordered_list_default_included_columns_else_not_evaluable",
+    "metrics": [
+      "exact_real_row_match_rate", "unique_real_row_match_count",
+      "k_anonymity", "distinct_l_diversity", "dcr_training", "dcr_holdout",
+      "nearest_neighbor_distance_ratio", "non_key_value_copy_rate"
+    ],
+    "formula_version": "normative-contract-v1-exact",
+    "distance": {
+      "numeric_date": "abs_delta_over_training_range_clipped_1",
+      "zero_range": "equal_0_else_1",
+      "categorical_string_boolean": "equal_0_else_1",
+      "null": "both_0_else_1",
+      "row_aggregation": "equal_weight_arithmetic_mean",
+      "nn_ratio_zero_zero": 1,
+      "nn_ratio_positive_zero": "positive_infinity"
+    },
+    "default_warnings": {
+      "unique_real_row_match_count_gt": 0,
+      "k_anonymity_lt": 5,
+      "distinct_l_diversity_lt": 2,
+      "nn_ratio_fraction_below_1_gt": 0.5
+    },
+    "degenerate_result": "not_evaluable"
+  }
+}

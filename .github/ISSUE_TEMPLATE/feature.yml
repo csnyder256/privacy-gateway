@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a privacy-preserving capability or integration.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Trust boundary or use case
+      description: What data crosses which boundary, and why is existing behavior insufficient?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Privacy and failure-mode considerations
+      description: Describe how the feature should fail and what must never be logged or persisted.
+    validations:
+      required: true

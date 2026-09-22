@@ -1,0 +1,21 @@
+services:
+  privacy-gateway:
+    build: .
+    read_only: true
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      PRIVACY_GATEWAY_DB: /data/privacy-gateway.db
+      PRIVACY_GATEWAY_MASTER_KEY: ${PRIVACY_GATEWAY_MASTER_KEY:?set a 32-byte base64url key}
+    volumes:
+      - privacy-gateway-data:/data
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+volumes:
+  privacy-gateway-data:
