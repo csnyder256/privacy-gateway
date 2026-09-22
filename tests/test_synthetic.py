@@ -260,15 +260,15 @@ def test_cli_requires_explicit_paths_and_writes_aggregate_outputs(tmp_path):
     )
     assert result.exit_code == 0, result.stdout
     assert len(read_rows(output)) == 5
-    combined = schema.read_text() + report.read_text()
+    combined = schema.read_text(encoding="utf-8") + report.read_text(encoding="utf-8")
     assert "ada@example.com" not in combined
 
 
 def test_source_has_no_sdv_dependency_or_import():
     root = Path(__file__).parents[1]
-    dependency_files = (root / "pyproject.toml").read_text() + (
+    dependency_files = (root / "pyproject.toml").read_text(encoding="utf-8") + (
         root / "package-lock.json"
-    ).read_text()
-    source = (root / "src/privacy_gateway/synthetic.py").read_text()
+    ).read_text(encoding="utf-8")
+    source = (root / "src/privacy_gateway/synthetic.py").read_text(encoding="utf-8")
     assert '"sdv' not in dependency_files.lower()
     assert "import sdv" not in source.lower()

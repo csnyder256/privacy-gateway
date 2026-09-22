@@ -9,7 +9,7 @@ from privacy_gateway.policies import PRESETS, policy_from_preset
 
 
 def test_catalog_and_presets_match_compatibility_manifest():
-    manifest = json.loads(Path("contracts/compatibility-v1.json").read_text())
+    manifest = json.loads(Path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
     assert [entity.value for entity in EntityType] == manifest["entities"]
     assert {action.value for action in Action} == set(manifest["actions"])
     for preset_name, overrides in manifest["preset_overrides"].items():

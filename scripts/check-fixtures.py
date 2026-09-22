@@ -13,7 +13,7 @@ SSN = re.compile(r"(?<!\d)(?!000|666|9\d\d)\d{3}-(?!00)\d{2}-(?!0000)\d{4}(?!\d)
 
 def main() -> None:
     path = Path(__file__).resolve().parents[1] / "evaluation" / "cases.jsonl"
-    for line_number, line in enumerate(path.read_text().splitlines(), start=1):
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         case = json.loads(line)
         if not isinstance(case.get("id"), str) or not isinstance(case.get("text"), str):
             raise SystemExit(f"{path}:{line_number}: fixture requires string id and text")

@@ -230,7 +230,7 @@ def test_reversible_generalization_is_bijective_when_values_collapse(tmp_path):
 
 
 def test_shared_cross_runtime_operator_fixtures(tmp_path):
-    fixtures = json.loads(Path("conformance/core-v1.json").read_text())
+    fixtures = json.loads(Path("conformance/core-v1.json").read_text(encoding="utf-8"))
     gateway = engine(tmp_path, None)
     for fixture in fixtures["operators"]:
         policy = Policy(
