@@ -4,16 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Configure a source-agnostic privacy gateway in minutes." />
-    <title>Privacy Gateway — Keep sensitive data local</title>
+    <title>Privacy Gateway: keep sensitive data local</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="assets/app.css" />
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="#top" aria-label="Privacy Gateway home">
-        <span class="brand-mark" aria-hidden="true">PG</span>
-        <span>Privacy Gateway</span>
-      </a>
+      <a class="brand" href="#top" aria-label="Privacy Gateway home">Privacy Gateway</a>
       <nav aria-label="Primary navigation">
         <a href="#configure">Configure</a>
         <a href="#how">How it works</a>
@@ -24,7 +21,7 @@
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="pulse"></span> Local-first privacy infrastructure</p>
+          <p class="eyebrow">Local-first privacy infrastructure</p>
           <h1>Useful data goes out.<br /><span>Sensitive data stays in.</span></h1>
           <p class="lede">
             Put one policy-controlled boundary between your data and any API, model, agent,
@@ -40,7 +37,7 @@
           </div>
         </div>
         <div class="terminal-card" aria-label="Anonymization example">
-          <div class="terminal-bar"><i></i><i></i><i></i><span>privacy-gateway</span></div>
+          <div class="terminal-bar"><span>privacy-gateway · policy preview</span></div>
           <div class="terminal-body">
             <p class="terminal-label">BEFORE</p>
             <p>Ask <mark>maya@acme.com</mark> about card <mark>4111 1111 1111 1111</mark>.</p>
@@ -162,7 +159,7 @@
       </section>
 
       <section id="how" class="how-section">
-        <div class="section-heading"><p class="eyebrow">One boundary, any source</p><h2>Designed to fit—not take over.</h2></div>
+        <div class="section-heading"><p class="eyebrow">One boundary, any source</p><h2>Designed to fit in, not take over.</h2></div>
         <div class="how-grid">
           <article><b>01</b><h3>Detect locally</h3><p>Regex, checksums, allow/deny lists, Presidio, and pluggable recognizers produce explicit confidence and provenance.</p></article>
           <article><b>02</b><h3>Apply policy</h3><p>Deterministic precedence turns every finding into a visible keep, redact, tokenize, hash, generalize, or synthetic decision.</p></article>
