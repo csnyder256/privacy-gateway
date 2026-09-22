@@ -61,7 +61,18 @@ def anonymize(
     """Detect and transform PII in one text value."""
     value = typer.get_text_stream("stdin").read() if text == "-" else text
     result = _engine(database).transform(value, preset=preset)
-    typer.echo(result.model_dump_json(indent=2) if json_output else result.text)
+    if json_output:
+        typer.echo(result.model_dump_json(indent=2))
+        raise typer.Exit(0 if result.text is not None else 1)
+    if result.text is None:
+        typer.echo(
+            f"blocked: {result.reason or 'transform blocked'}\n"
+            "Set PRIVACY_GATEWAY_MASTER_KEY (see `privacy-gateway keygen`) to enable "
+            "reversible tokenization, or choose a preset that does not tokenize.",
+            err=True,
+        )
+        raise typer.Exit(1)
+    typer.echo(result.text)
 
 
 @app.command("purge-expired")

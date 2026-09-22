@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 import httpx
+from cryptography.exceptions import InvalidTag
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -92,6 +93,10 @@ def create_app(database_path: str | None = None) -> FastAPI:
                     request.session_id,
                 )
             }
+        except InvalidTag as exc:
+            raise HTTPException(
+                status_code=422, detail="capsule authentication failed"
+            ) from exc
         except (ValueError, TypeError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 

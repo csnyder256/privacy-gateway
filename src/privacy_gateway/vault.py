@@ -6,6 +6,7 @@ import json
 import sqlite3
 import time
 import uuid
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -76,7 +77,7 @@ class Vault:
         self.path = str(path)
         self.master_key = master_key
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             connection.executescript(SCHEMA)
 
     def connect(self) -> sqlite3.Connection:
@@ -107,7 +108,7 @@ class Vault:
                 self.master_key,
                 aad=f"session-metadata:{session_id}".encode(),
             )
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             connection.execute(
                 "INSERT INTO sessions VALUES(?,?,?,?,?)",
                 (session_id, policy.model_dump_json(), metadata_encrypted, now, now + ttl),
@@ -116,7 +117,7 @@ class Vault:
 
     def _active_session_row(self, session_id: str) -> sqlite3.Row:
         now = self._now()
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             row = connection.execute(
                 "SELECT * FROM sessions WHERE id=? AND expires_at>?",
                 (session_id, now),
@@ -146,7 +147,7 @@ class Vault:
     def find_mapping(self, session_id: str, entity: str, original: str) -> sqlite3.Row | None:
         fingerprint = self._fingerprint(session_id, entity, original)
         now = self._now()
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             return connection.execute(
                 "SELECT * FROM mappings WHERE session_id=? AND entity_type=? "
                 "AND original_hmac=? AND expires_at>?",
@@ -171,7 +172,7 @@ class Vault:
             aad=f"mapping:{session_id}:{mapping_id}".encode(),
         )
         try:
-            with self.connect() as connection:
+            with closing(self.connect()) as connection, connection:
                 connection.execute(
                     "INSERT INTO mappings VALUES(?,?,?,?,?,?,?,?,?)",
                     (
@@ -204,7 +205,7 @@ class Vault:
     ) -> str:
         detection_id = str(uuid.uuid4())
         now = self._now()
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             connection.execute(
                 "INSERT INTO detections VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
@@ -235,7 +236,7 @@ class Vault:
         retention_seconds: int = 2_592_000,
     ) -> None:
         now = self._now()
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             connection.execute(
                 "INSERT INTO audit_events VALUES(?,?,?,?,?,?,?)",
                 (
@@ -253,7 +254,7 @@ class Vault:
         key = self._require_key()
         self._active_session_row(session_id)
         now = self._now()
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             rows = connection.execute(
                 "SELECT id, replacement, original_encrypted FROM mappings "
                 "WHERE session_id=? AND expires_at>?",
@@ -270,7 +271,7 @@ class Vault:
 
     def session_summary(self, session_id: str) -> dict[str, Any]:
         self._active_session_row(session_id)
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             rows = connection.execute(
                 "SELECT entity_type, detector, action, policy_name, policy_version, "
                 "COUNT(*) AS count, MIN(confidence_ppm) AS min_confidence_ppm, "
@@ -283,14 +284,14 @@ class Vault:
 
     def delete_session(self, session_id: str) -> bool:
         """Delete one session and all cascading mappings and detections."""
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             cursor = connection.execute("DELETE FROM sessions WHERE id=?", (session_id,))
         return cursor.rowcount == 1
 
     def purge_expired(self) -> dict[str, int]:
         now = self._now()
         deleted: dict[str, int] = {}
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             for table in ("audit_events", "detections", "mappings", "sessions"):
                 cursor = connection.execute(f"DELETE FROM {table} WHERE expires_at<=?", (now,))
                 deleted[table] = cursor.rowcount

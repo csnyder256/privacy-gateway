@@ -36,6 +36,26 @@ def test_transform_and_client_capsule_restore(tmp_path):
     assert restored.json()["text"] == "Email a@example.com"
 
 
+def test_capsule_restore_with_wrong_key_fails_closed_as_422(tmp_path):
+    client = TestClient(create_app(str(tmp_path / "api.db")))
+    key = generate_key()
+    body = client.post(
+        "/v1/transform",
+        json={"text": "Email a@example.com", "preset": "balanced", "restore_key": key},
+    ).json()
+    response = client.post(
+        "/v1/restore/capsule",
+        json={
+            "text": body["text"],
+            "session_id": body["session_id"],
+            "capsule": body["capsule"],
+            "restore_key": generate_key(),
+        },
+    )
+    assert response.status_code == 422
+    assert "authentication failed" in response.json()["detail"]
+
+
 def test_transform_returns_explicit_blocked_state_without_key(tmp_path):
     client = TestClient(create_app(str(tmp_path / "api.db")))
     response = client.post(
