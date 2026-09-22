@@ -2,8 +2,9 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("../src/privacy_gateway/static/", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../src/privacy_gateway/static/", import.meta.url));
 const types = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".svg": "image/svg+xml" };
 
 createServer(async (request, response) => {
