@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import __version__
 from .adapters import (
     AdapterBlocked,
     normalize_provider_path,
@@ -37,7 +38,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
     engine = PrivacyEngine(vault)
     app = FastAPI(
         title="Privacy Gateway",
-        version="0.2.0",
+        version=__version__,
         description="Policy-controlled PII anonymization, tagging, auditing, and reversible restoration.",
     )
     app.state.vault = vault
@@ -47,7 +48,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
     def health():
         return {
             "ok": True,
-            "version": "0.2.0",
+            "version": __version__,
             "persistent_restoration": vault.master_key is not None,
         }
 

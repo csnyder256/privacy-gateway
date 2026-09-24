@@ -1,6 +1,6 @@
 {
   "name": "@privacy-gateway/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Portable policy and transformation core for Privacy Gateway",
   "license": "MIT",
   "repository": {
