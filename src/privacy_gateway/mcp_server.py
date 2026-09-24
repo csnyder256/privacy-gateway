@@ -10,16 +10,28 @@ from .models import Policy
 from .vault import open_vault
 
 
-def main():
+def _server_class():
+    """Return the MCP SDK's high-level server class.
+
+    mcp 2.x renamed ``FastMCP`` to ``MCPServer`` and moved it; the constructor,
+    ``@tool()`` and ``run()`` used here are unchanged, so both lines work.
+    """
+    try:
+        from mcp.server.mcpserver import MCPServer
+    except ImportError:
+        pass
+    else:
+        return MCPServer
     try:
         from mcp.server.fastmcp import FastMCP
     except ImportError as exc:
         raise SystemExit("Install the MCP extra: pip install 'privacy-gateway[mcp]'") from exc
+    return FastMCP
 
-    engine = PrivacyEngine(
-        open_vault(os.getenv("PRIVACY_GATEWAY_DB", "./data/privacy-gateway.db"), key_from_env())
-    )
-    mcp = FastMCP("Privacy Gateway")
+
+def build_server(engine: PrivacyEngine):
+    """Build the MCP server around an engine without starting a transport."""
+    mcp = _server_class()("Privacy Gateway")
 
     @mcp.tool()
     def protect_text(
@@ -61,7 +73,14 @@ def main():
         """Return type/action counts without exposing original values."""
         return engine.vault.session_summary(session_id)
 
-    mcp.run()
+    return mcp
+
+
+def main():
+    engine = PrivacyEngine(
+        open_vault(os.getenv("PRIVACY_GATEWAY_DB", "./data/privacy-gateway.db"), key_from_env())
+    )
+    build_server(engine).run()
 
 
 if __name__ == "__main__":
