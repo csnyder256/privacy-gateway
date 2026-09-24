@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Annotated
 
 import typer
 
-from .crypto import decode_key, generate_key, key_from_env
+from .crypto import generate_key, key_from_env
 from .engine import PrivacyEngine
 from .synthetic import (
     infer_schema,
@@ -19,7 +17,8 @@ from .synthetic import (
     synthesize_table,
     write_rows,
 )
-from .vault import Vault, open_vault
+from .vault import open_vault
+from .verification import round_trip_checks
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -126,45 +125,7 @@ def synthesize(
 @app.command()
 def verify():
     """Run local fail-closed, round-trip, and altered-token probes."""
-    client_key = generate_key()
-    source = "Contact zoe@example.com about 4111 1111 1111 1111."
-    with TemporaryDirectory(prefix="privacy-gateway-verify-") as directory:
-        gateway = PrivacyEngine(Vault(Path(directory) / "verify.db"))
-        protected = gateway.transform(source, preset="finance", restore_key=client_key)
-        if protected.text is None or protected.capsule is None:
-            raise typer.Exit(1)
-        restored = PrivacyEngine.restore_capsule(
-            protected.text,
-            protected.capsule,
-            client_key,
-            protected.session_id,
-        )
-        altered = re.sub(
-            r"\[\[PG1\|([A-Z_]+)\|([A-Z2-7]{26})\|([A-Z2-7]{16})\]\]",
-            lambda match: (
-                f"[[ pg1 | {match.group(1).lower()} | {match.group(2).lower()} | "
-                f"{match.group(3).lower()} ]]"
-            ),
-            protected.text,
-        )
-        tolerant = PrivacyEngine.restore_capsule(
-            altered,
-            protected.capsule,
-            client_key,
-            protected.session_id,
-        )
-        blocked_gateway = PrivacyEngine(
-            Vault(Path(directory) / "blocked.db"),
-            detectors=gateway.detectors,
-        )
-        blocked = blocked_gateway.transform(source, preset="finance")
-        checks = {
-            "round_trip": restored == source,
-            "tolerant_tagged_token": tolerant == source,
-            "keyless_reversible_blocks": blocked.text is None and blocked.state.value == "blocked",
-            "source_not_in_protected_text": "zoe@example.com" not in protected.text,
-            "client_key_valid": len(decode_key(client_key)) == 32,
-        }
+    checks = round_trip_checks()
     typer.echo(json.dumps(checks, indent=2, sort_keys=True))
     if not all(checks.values()):
         raise typer.Exit(1)
