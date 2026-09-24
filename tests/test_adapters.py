@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import httpx
@@ -528,13 +529,18 @@ def test_proxy_rejects_upstream_redirects_and_non_json(
 
 
 def test_mcp_surface_is_exact():
-    source = Path("src/privacy_gateway/mcp_server.py").read_text(encoding="utf-8")
-    names = {
+    """The tool set is frozen by the compatibility manifest, not by the code."""
+    manifest = json.loads(Path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
+    names = set(manifest["adapters"]["mcp_tools"])
+    assert names == {
         "protect_text",
-        "restore_text",
+        "protect_json",
         "restore_client_text",
         "inspect_policy",
-        "privacy_summary",
+        "verify_round_trip",
     }
+    source = Path("src/privacy_gateway/mcp_server.py").read_text(encoding="utf-8")
     assert {name for name in names if f"def {name}(" in source} == names
-    assert source.count("@mcp.tool()") == 5
+    assert source.count("@mcp.tool()") == len(names)
+    # Server-side restoration must never be reachable from an MCP client.
+    assert "engine.restore(" not in source
