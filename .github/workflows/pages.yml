@@ -33,7 +33,7 @@ jobs:
           cp src/privacy_gateway/static/app.css _site/assets/app.css
           cp src/privacy_gateway/static/app.js _site/assets/app.js
           cp src/privacy_gateway/static/favicon.svg _site/assets/favicon.svg
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       - id: deployment
