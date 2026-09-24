@@ -4,6 +4,33 @@ All notable changes to this project are recorded here. Versions follow semantic
 versioning; while the project is pre-1.0, new backward-compatible features raise the
 minor version and fixes raise the patch version.
 
+## 0.3.0 - 2026-09-24
+
+### Changed
+- **Breaking (MCP only):** the MCP server now exposes exactly the five tools that
+  `docs/normative-contract.md` and `contracts/compatibility-v1.json` name:
+  `protect_text`, `protect_json`, `restore_client_text`, `inspect_policy` and
+  `verify_round_trip`. `restore_text` and `privacy_summary` are no longer MCP tools. The
+  contract forbids exposing side-effect restoration as a generic MCP tool, because an MCP
+  client is usually a model, and a tool that turns surrogates back into originals hands it
+  what the gateway exists to keep from it. Both remain available over HTTP
+  (`POST /v1/restore`, `GET /v1/sessions/{id}/summary`). A test now checks the served tool
+  set against the manifest, so the two cannot drift apart again.
+
+### Added
+- `protect_json` MCP tool: protects every string inside a JSON value, such as tool
+  arguments or a record, and keeps its structure.
+- `verify_round_trip` MCP tool: runs the same round-trip, tolerant-token and fail-closed
+  probes as `privacy-gateway verify`, against the running gateway's detectors.
+
+### Fixed
+- On mcp 2.1 and later, tool failures (an unknown preset, a tampered capsule, an invalid
+  policy) reached the client only as "Error executing tool". They now carry the reason,
+  as the HTTP API's 422 responses do.
+- `privacy-gateway-mcp` without the `[mcp]` extra no longer creates
+  `./data/privacy-gateway.db`, or connects to PostgreSQL, before reporting that the extra
+  is missing.
+
 ## 0.2.1 - 2026-09-23
 
 ### Fixed
