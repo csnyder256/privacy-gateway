@@ -11,12 +11,17 @@ permissions:
 
 jobs:
   python:
+    strategy:
+      fail-fast: false
+      matrix:
+        # requires-python is >=3.11 and the container ships 3.14; test both ends.
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: pip
       - run: pip install -e '.[dev]'
       - run: pytest --cov=privacy_gateway --cov-report=term-missing
@@ -24,20 +29,33 @@ jobs:
       - run: ruff format --check src tests
       - run: python scripts/check-fixtures.py
       - run: privacy-gateway verify
+      # The [mcp] extra allows two SDK lines with different import paths.
+      # Exercise the real server on each, not just its source text.
+      - name: MCP server on mcp 1.x
+        run: |
+          pip install 'mcp>=1.2,<2'
+          pytest tests/test_mcp_server.py
+      - name: MCP server on mcp 2.x
+        run: |
+          pip install 'mcp>=2,<3'
+          pytest tests/test_mcp_server.py
 
   secret-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          # Required to scan pull requests; without it every PR run fails.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   typescript:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -51,8 +69,8 @@ jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install build
@@ -63,7 +81,7 @@ jobs:
   container:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: ./scripts/container-smoke.sh
 
   dependency-review:
@@ -72,5 +90,5 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/dependency-review-action@v4

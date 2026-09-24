@@ -1,17 +1,35 @@
+# Updates are grouped so a routine week is one PR per ecosystem instead of
+# one per package (nine arrived in the first two days). Majors for language
+# dependencies still get their own PR, since those deserve a separate read.
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /
     schedule:
       interval: weekly
+    groups:
+      pip-minor-and-patch:
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # @types/node tracks the oldest supported runtime (engines: node >=20),
+      # not the newest Node release. A major bump would type-check APIs that
+      # users on the supported floor do not have.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /
     schedule:

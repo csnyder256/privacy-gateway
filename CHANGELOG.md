@@ -4,6 +4,20 @@ All notable changes to this project are recorded here. Versions follow semantic
 versioning; while the project is pre-1.0, new backward-compatible features raise the
 minor version and fixes raise the patch version.
 
+## 0.2.1 - 2026-09-23
+
+### Fixed
+- `privacy-gateway-mcp` works with the mcp 2.x SDK. The `[mcp]` extra now allows
+  `mcp>=1.2,<3`, and on 2.x the server used to exit with "Install the MCP extra" even
+  though the extra was installed, because 2.x renamed `FastMCP` to `MCPServer`. Both SDK
+  lines are now supported and tested in CI.
+- The API reports its version from the package instead of a second hardcoded copy.
+
+### Changed
+- The container image is built on Python 3.14 (was 3.12).
+- The TypeScript packages build with TypeScript 7.
+- CI tests Python 3.11 through 3.14, and the secret scan runs on pull requests again.
+
 ## 0.2.0 - 2026-09-22
 
 ### Added

@@ -24,8 +24,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
       - name: Assemble site artifact
         run: |
           mkdir -p _site/assets
@@ -33,7 +33,7 @@ jobs:
           cp src/privacy_gateway/static/app.css _site/assets/app.css
           cp src/privacy_gateway/static/app.js _site/assets/app.js
           cp src/privacy_gateway/static/favicon.svg _site/assets/favicon.svg
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       - id: deployment
