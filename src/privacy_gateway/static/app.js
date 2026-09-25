@@ -156,7 +156,7 @@ function updatePreview() {
 const modeDescriptions = {
   client: "Client-held capsule: run the core beside your application; no original mapping is stored by the gateway.",
   local: "Local encrypted vault: originals are encrypted in SQLite under your operator-held master key.",
-  selfhosted: "Self-hosted network vault: your central gateway owns encrypted mappings; v0.1 is single-operator, not managed multi-tenant.",
+  selfhosted: "Self-hosted network vault: your central gateway owns encrypted mappings; it is single-operator, not managed multi-tenant.",
   oneway: "One-way: the downloaded policy contains no reversible rules or restoration key.",
 };
 function pythonSnippet() {
@@ -171,7 +171,7 @@ function typescriptSnippet() {
   return `npm install @privacy-gateway/client\n\nimport { PrivacyGatewayClient } from "@privacy-gateway/client";\nimport policy from "./privacy-gateway-policy.json" with { type: "json" };\n\nconst gateway = new PrivacyGatewayClient({ baseUrl: "${mode === "local" ? "http://127.0.0.1:8787" : "https://privacy-gateway.internal"}" });\nconst session = await gateway.createSession({ policy });\nconst result = await gateway.transform(text, { sessionId: session.session_id });\nif (result.state !== "protected") throw new Error(result.reason ?? "blocked");`;
 }
 function vaultOnly(body) {
-  return ["client", "oneway"].includes(mode) ? `# This adapter needs gateway-owned restoration in v0.1.\n# Select Local encrypted vault or Self-hosted network vault.` : body;
+  return ["client", "oneway"].includes(mode) ? `# This adapter needs gateway-owned restoration.\n# Select Local encrypted vault or Self-hosted network vault.` : body;
 }
 const snippets = {
   python: pythonSnippet,

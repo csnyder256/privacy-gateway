@@ -4,6 +4,15 @@ All notable changes to this project are recorded here. Versions follow semantic
 versioning; while the project is pre-1.0, new backward-compatible features raise the
 minor version and fixes raise the patch version.
 
+## Unreleased
+
+### Fixed
+- The onboarding page's top bar still said `v0.1`, both on the published site and
+  under `privacy-gateway serve`. It now shows the package version, and a test fails
+  when the two drift apart. A release's version bump therefore updates the page,
+  and the Pages workflow republishes it when the bump reaches `main`. Two
+  policy-builder hints no longer name a version either.
+
 ## 0.4.0 - 2026-09-25
 
 ### Added
