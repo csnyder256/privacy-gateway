@@ -6,6 +6,7 @@ test_mcp_surface_is_exact) cannot catch an SDK rename, and one did happen.
 
 import asyncio
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -19,11 +20,17 @@ from privacy_gateway.vault import Vault
 
 MANIFEST = json.loads(Path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
 TOOLS = set(MANIFEST["adapters"]["mcp_tools"])
+ANNOTATIONS = MANIFEST["adapters"]["mcp_tool_annotations"]
+HINTS = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
 
 
 @pytest.fixture
-def server(tmp_path):
-    engine = PrivacyEngine(Vault(tmp_path / "mcp.db", decode_key(generate_key())))
+def engine(tmp_path):
+    return PrivacyEngine(Vault(tmp_path / "mcp.db", decode_key(generate_key())))
+
+
+@pytest.fixture
+def server(engine):
     return build_server(engine)
 
 
@@ -91,3 +98,47 @@ def test_tampered_capsule_is_reported_not_crashed(server):
             },
         )
     assert "Error executing tool restore_client_text" != str(caught.value).strip()
+
+
+# Hosts treat an unset hint as the most cautious reading and some directories
+# reject a tool that leaves any hint unset, so every tool declares all four, as
+# booleans, with the values the manifest fixes.
+def test_every_tool_declares_all_four_hints_as_the_contract_fixes(server):
+    assert set(ANNOTATIONS) == TOOLS
+    for tool in asyncio.run(server.list_tools()):
+        declared = tool.annotations.model_dump(by_alias=True) if tool.annotations else {}
+        hints = {hint: declared.get(hint) for hint in HINTS}
+        assert all(isinstance(value, bool) for value in hints.values()), (tool.name, hints)
+        assert hints == ANNOTATIONS[tool.name], tool.name
+
+
+def vault_rows(engine):
+    with sqlite3.connect(engine.vault.path) as db:
+        return list(db.iterdump())
+
+
+# The hints are claims about behaviour; hold the tools to them. A tool marked
+# read-only must leave the vault exactly as it was, and one that writes must
+# really write (else the check below proves nothing).
+def test_read_only_tools_leave_the_vault_untouched_and_the_others_write(engine, server):
+    key = generate_key()
+    protected = engine.transform("Email ada@example.com", restore_key=key)
+    arguments = {
+        "restore_client_text": {
+            "text": protected.text,
+            "capsule": protected.capsule,
+            "restore_key": key,
+            "session_id": protected.session_id,
+        },
+        "inspect_policy": {"preset": "balanced"},
+        "verify_round_trip": {},
+        "protect_text": {"text": "mail bob@example.com"},
+        "protect_json": {"value": {"to": "bob@example.com"}},
+    }
+    assert set(arguments) == TOOLS
+    for name, args in arguments.items():
+        before = vault_rows(engine)
+        for _ in range(2):
+            call(server, name, args)
+        changed = vault_rows(engine) != before
+        assert changed is not ANNOTATIONS[name]["readOnlyHint"], name

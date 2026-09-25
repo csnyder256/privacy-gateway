@@ -74,13 +74,50 @@ def _selected_policy(session_id: str | None, policy: dict | None) -> Policy | No
     return Policy.model_validate(policy) if policy is not None else None
 
 
+# MCP tool annotations: what calling each tool does to its environment. Hosts
+# read these to decide what to confirm with the user, and an unset hint means
+# the most cautious reading (writes, destructive, not idempotent, reaches the
+# open world), so every tool sets all four. The values are normative:
+# contracts/compatibility-v1.json, adapters.mcp_tool_annotations.
+_WRITES_TO_VAULT = {
+    # Stores mappings, detections and audit rows in the gateway's own vault:
+    # additive, with a new audit row on every call, and nothing outside it.
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": False,
+}
+_PURE = {
+    # A function of its arguments alone. verify_round_trip probes a throwaway
+    # vault, never the gateway's own.
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+TOOL_ANNOTATIONS = {
+    "protect_text": _WRITES_TO_VAULT,
+    "protect_json": _WRITES_TO_VAULT,
+    "restore_client_text": _PURE,
+    "inspect_policy": _PURE,
+    "verify_round_trip": _PURE,
+}
+
+
 def build_server(engine: PrivacyEngine, sdk=None):
     """Build the MCP server around an engine without starting a transport."""
     server_class, tool_error = sdk or _sdk()
+    from mcp.types import ToolAnnotations
+
     mcp = server_class("Privacy Gateway")
     reported = _reported_as(tool_error)
 
-    @mcp.tool()
+    def tool(fn):
+        # A tool missing from TOOL_ANNOTATIONS fails here, at startup.
+        annotations = ToolAnnotations(**TOOL_ANNOTATIONS[fn.__name__])
+        return mcp.tool(annotations=annotations)(fn)
+
+    @tool
     @reported
     def protect_text(
         text: str,
@@ -96,7 +133,7 @@ def build_server(engine: PrivacyEngine, sdk=None):
             policy=_selected_policy(session_id, policy),
         ).model_dump(mode="json")
 
-    @mcp.tool()
+    @tool
     @reported
     def protect_json(
         value: Any,
@@ -119,13 +156,13 @@ def build_server(engine: PrivacyEngine, sdk=None):
             ],
         }
 
-    @mcp.tool()
+    @tool
     @reported
     def restore_client_text(text: str, capsule: str, restore_key: str, session_id: str) -> str:
         """Restore a client-held capsule without persisting the original on the gateway."""
         return PrivacyEngine.restore_capsule(text, capsule, restore_key, session_id)
 
-    @mcp.tool()
+    @tool
     @reported
     def inspect_policy(preset: str = "balanced") -> dict:
         """Return the complete policy behind a built-in preset."""
@@ -133,7 +170,7 @@ def build_server(engine: PrivacyEngine, sdk=None):
 
         return policy_from_preset(preset).model_dump(mode="json")
 
-    @mcp.tool()
+    @tool
     @reported
     def verify_round_trip() -> dict:
         """Run the round-trip, tolerant-token and fail-closed probes against this gateway."""

@@ -31,13 +31,19 @@ jobs:
       - run: privacy-gateway verify
       # The [mcp] extra allows two SDK lines with different import paths.
       # Exercise the real server on each, not just its source text.
+      # The floor, then the newest of each line. -U matters: a satisfied
+      # requirement would otherwise leave the previous step's version in place.
+      - name: MCP server on the oldest supported mcp (1.14)
+        run: |
+          pip install 'mcp==1.14.0'
+          pytest tests/test_mcp_server.py
       - name: MCP server on mcp 1.x
         run: |
-          pip install 'mcp>=1.2,<2'
+          pip install -U 'mcp>=1.14,<2'
           pytest tests/test_mcp_server.py
       - name: MCP server on mcp 2.x
         run: |
-          pip install 'mcp>=2,<3'
+          pip install -U 'mcp>=2,<3'
           pytest tests/test_mcp_server.py
 
   secret-scan:

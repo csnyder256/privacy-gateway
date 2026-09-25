@@ -4,6 +4,25 @@ All notable changes to this project are recorded here. Versions follow semantic
 versioning; while the project is pre-1.0, new backward-compatible features raise the
 minor version and fixes raise the patch version.
 
+## 0.4.0 - 2026-09-25
+
+### Added
+- MCP tool annotations. Every MCP tool now declares all four hints as explicit
+  booleans: `protect_text` and `protect_json` write to the gateway's own vault
+  (`readOnlyHint` false, `destructiveHint` false, `idempotentHint` false), and
+  `restore_client_text`, `inspect_policy` and `verify_round_trip` are read-only and
+  idempotent. No tool reaches outside the gateway (`openWorldHint` false). Hosts read
+  these to decide what to confirm with the user, and without them they assume the
+  most cautious reading of every tool. The values are fixed in
+  `contracts/compatibility-v1.json` (`adapters.mcp_tool_annotations`), and a test
+  holds the tools to them: read-only tools must leave the vault unchanged.
+
+### Changed
+- The `[mcp]` extra now needs `mcp>=1.14`. The old `mcp>=1.2` floor was never true:
+  releases before 1.14 cannot register this server's tools (they fail on its
+  postponed type annotations), and tool annotations need 1.7 or later anyway. CI now
+  runs the MCP tests on the floor as well as on the newest 1.x and 2.x.
+
 ## 0.3.0 - 2026-09-24
 
 ### Changed

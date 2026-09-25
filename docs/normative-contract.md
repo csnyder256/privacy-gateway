@@ -384,7 +384,11 @@ accepts any node and recursively scans its complete subtree without restoring it
   Policy paths use PGPath-v1. Redirects and caller-supplied destinations are forbidden.
 - MCP: stdio and Streamable HTTP tools `protect_text`, `protect_json`,
   `restore_client_text`, `inspect_policy`, and `verify_round_trip`; side-effect
-  restoration is not exposed as a generic MCP tool.
+  restoration is not exposed as a generic MCP tool. Every tool declares all four
+  MCP tool annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
+  `openWorldHint`) as booleans: `protect_text` and `protect_json` write to the
+  gateway's own vault (not read-only, not destructive, not idempotent), the other
+  three are read-only and idempotent, and none reaches outside the gateway.
 
 SSE uses UTF-8 lines, permits comments, joins consecutive `data:` lines with LF,
 and rejects when joined data exceeds 1,048,576 UTF-8 bytes or total stream input

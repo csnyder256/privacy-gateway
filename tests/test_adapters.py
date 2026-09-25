@@ -541,6 +541,8 @@ def test_mcp_surface_is_exact():
     }
     source = Path("src/privacy_gateway/mcp_server.py").read_text(encoding="utf-8")
     assert {name for name in names if f"def {name}(" in source} == names
-    assert source.count("@mcp.tool()") == len(names)
+    # Every tool is registered through tool(), which attaches its annotations.
+    assert source.count("    @tool\n") == len(names)
+    assert "@mcp.tool(" not in source
     # Server-side restoration must never be reachable from an MCP client.
     assert "engine.restore(" not in source
