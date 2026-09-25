@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from privacy_gateway import __version__
 from privacy_gateway.models import Action, EntityType
 from privacy_gateway.policies import PRESETS
 
@@ -60,3 +61,11 @@ def test_accessibility_and_pages_assets_are_wired():
     assert ".entity-row .reversible,.entity-row .confidence{display:none}" not in css
     assert "_site/assets/app.css" in workflow
     assert "_site/assets/app.js" in workflow
+
+
+def test_topbar_shows_the_package_version():
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    assert f'<span class="topbar-meta">v{__version__} / MIT</span>' in html, (
+        "Bump the version in src/privacy_gateway/static/index.html with the package version; "
+        "the Pages site republishes from it when the bump lands on main."
+    )
