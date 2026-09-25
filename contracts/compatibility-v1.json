@@ -204,7 +204,14 @@
     "mcp_tools": [
       "protect_text", "protect_json", "restore_client_text", "inspect_policy",
       "verify_round_trip"
-    ]
+    ],
+    "mcp_tool_annotations": {
+      "protect_text": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+      "protect_json": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+      "restore_client_text": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+      "inspect_policy": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+      "verify_round_trip": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+    }
   },
   "privacy_risk": {
     "attacker": "configured_quasi_identifiers_with_optional_real_holdout",
