@@ -76,6 +76,28 @@ def _routing_number(seed: int) -> str:
     raise AssertionError("an ABA routing check digit must exist")
 
 
+def _money_magnitude(value: str) -> int:
+    """Return the power of ten of a money literal's whole units; the fraction never counts.
+
+    The last `.` or `,` is the decimal mark unless it only groups digits: it occurs more than
+    once (`1,234,567`), or it is the only mark and exactly three digits follow it (`1,284`,
+    `€1.284`). So `1,284.50`, `1.284,50`, `1 284,50` and `12.5` all end in a fraction.
+    """
+    number = re.search(r"\d(?:.*\d)?", value, re.DOTALL)
+    amount = number.group() if number else ""
+    mark = max(amount.rfind("."), amount.rfind(","))
+    if mark >= 0:
+        separator = amount[mark]
+        other = "," if separator == "." else "."
+        grouping = amount.count(separator) > 1 or (
+            other not in amount and re.fullmatch(r"\d{3}", amount[mark + 1 :]) is not None
+        )
+        if not grouping:
+            amount = amount[:mark]
+    whole = re.sub(r"\D", "", amount).lstrip("0")
+    return max(0, len(whole) - 1)
+
+
 class PrivacyEngine:
     def __init__(self, vault: Vault, detectors: Iterable[Detector] | None = None):
         self.vault = vault
@@ -168,9 +190,8 @@ class PrivacyEngine:
             year = re.search(r"(?:19|20)\d{2}", detection.value)
             return f"{year.group()}" if year else "[DATE]"
         if detection.entity == EntityType.MONEY:
-            digits = re.sub(r"\D", "", detection.value).lstrip("0") or "0"
             symbol = detection.value[:1] if detection.value[:1] in "$€£" else ""
-            return f"{symbol}~10^{max(0, len(digits) - 1)}"
+            return f"{symbol}~10^{_money_magnitude(detection.value)}"
         if detection.entity == EntityType.EMAIL_ADDRESS and "@" in detection.value:
             return f"***@{detection.value.rsplit('@', 1)[1]}"
         return f"[{detection.entity.value}]"

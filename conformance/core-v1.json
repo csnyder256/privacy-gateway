@@ -24,6 +24,30 @@
       "text": "alice@example.com",
       "key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       "expected": "***@example.com"
+    },
+    {
+      "name": "generalized-money-counts-whole-units-only",
+      "entity": "MONEY",
+      "action": "generalize",
+      "text": "Paid $1,284.50 yesterday.",
+      "key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "Paid $~10^3 yesterday."
+    },
+    {
+      "name": "generalized-money-decimal-comma",
+      "entity": "MONEY",
+      "action": "generalize",
+      "text": "Rent was €1.284,50, €1 284,50 or 1.284,50 EUR.",
+      "key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "Rent was €~10^3, €~10^3 or ~10^3."
+    },
+    {
+      "name": "generalized-money-thousands-groups-and-sub-unit-amounts",
+      "entity": "MONEY",
+      "action": "generalize",
+      "text": "Budget $1,284 or €1.284 or 1,234,567 USD; fees $0.99 or 12,5 GBP.",
+      "key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "Budget $~10^3 or €~10^3 or ~10^6; fees $~10^0 or ~10^1."
     }
   ],
   "detection": [

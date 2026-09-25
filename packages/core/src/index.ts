@@ -551,13 +551,29 @@ async function synthetic(item: Detection, key?: Uint8Array): Promise<string> {
   return `SYNTHETIC_${item.entity}_${hex(digest).slice(0, 10).toUpperCase()}`;
 }
 
+// Power of ten of a money literal's whole units; the fraction never counts. The last "." or ","
+// is the decimal mark unless it only groups digits: it occurs more than once, or it is the only
+// mark and exactly three digits follow it. Same rule as _money_magnitude in the Python engine.
+function moneyMagnitude(value: string): number {
+  let amount = value.match(/\d(?:.*\d)?/su)?.[0] ?? "";
+  const mark = Math.max(amount.lastIndexOf("."), amount.lastIndexOf(","));
+  if (mark >= 0) {
+    const separator = amount[mark]!;
+    const other = separator === "." ? "," : ".";
+    const grouping =
+      amount.indexOf(separator) !== mark || (!amount.includes(other) && /^\d{3}$/u.test(amount.slice(mark + 1)));
+    if (!grouping) amount = amount.slice(0, mark);
+  }
+  const whole = amount.replace(/\D/gu, "").replace(/^0+/u, "");
+  return Math.max(0, whole.length - 1);
+}
+
 function generalize(item: Detection): string {
   if (item.entity === "DATE_TIME") return item.value.match(/(?:19|20)\d{2}/u)?.[0] ?? "[DATE]";
   if (item.entity === "EMAIL_ADDRESS") return `***@${item.value.split("@").at(-1)}`;
   if (item.entity === "MONEY") {
-    const digits = item.value.replace(/\D/gu, "").replace(/^0+/u, "") || "0";
     const symbol = /^[\$€£]/u.test(item.value) ? item.value[0] : "";
-    return `${symbol}~10^${Math.max(0, digits.length - 1)}`;
+    return `${symbol}~10^${moneyMagnitude(item.value)}`;
   }
   return `[${item.entity}]`;
 }

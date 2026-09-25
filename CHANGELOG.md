@@ -12,6 +12,14 @@ minor version and fixes raise the patch version.
   when the two drift apart. A release's version bump therefore updates the page,
   and the Pages workflow republishes it when the bump reaches `main`. Two
   policy-builder hints no longer name a version either.
+- MONEY `generalize` (the Balanced preset's MONEY action) counted the digits after the
+  decimal mark as part of the amount, so `$1,284.50` became `$~10^5`, 100 times too large.
+  It now counts whole units only: `$1,284.50` becomes `$~10^3`, as `$1,284` already did.
+  The last `.` or `,` is the decimal mark unless it occurs more than once (`1,234,567`) or
+  it is the only mark and exactly three digits follow it (`$1,284`, `€1.284`), so
+  decimal-comma amounts such as `€1.284,50` and `€1 284,50` become `€~10^3` too. The Python
+  engine and `@privacy-gateway/core` share the rule, and `conformance/core-v1.json` now has
+  MONEY cases that both must pass.
 
 ## 0.4.0 - 2026-09-25
 

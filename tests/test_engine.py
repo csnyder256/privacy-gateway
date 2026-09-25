@@ -229,6 +229,36 @@ def test_reversible_generalization_is_bijective_when_values_collapse(tmp_path):
     )
 
 
+# Mirrored in packages/core/test/core.test.ts; keep the two tables identical.
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("$1,284.50", "$~10^3"),
+        ("$1,284", "$~10^3"),
+        ("$1284.5", "$~10^3"),
+        ("$1,234,567.89", "$~10^6"),
+        ("$1,234.567", "$~10^3"),
+        ("$1.2345", "$~10^0"),
+        ("$0.99", "$~10^0"),
+        ("$007.50", "$~10^0"),
+        ("€1.284,50", "€~10^3"),
+        ("€1 284,50", "€~10^3"),
+        ("€1.284", "€~10^3"),
+        ("€1.234.567,89", "€~10^6"),
+        ("€1 234 567", "€~10^6"),
+        ("£12.5", "£~10^1"),
+        ("1,284.50 USD", "~10^3"),
+        ("1.234.567 EUR", "~10^6"),
+        ("12,5 GBP", "~10^1"),
+    ],
+)
+def test_money_generalization_counts_whole_units_only(tmp_path, source, expected):
+    result = engine(tmp_path, None).transform(
+        f"Paid {source} today.", preset="balanced", restore_key=generate_key()
+    )
+    assert result.text == f"Paid {expected} today."
+
+
 def test_shared_cross_runtime_operator_fixtures(tmp_path):
     fixtures = json.loads(Path("conformance/core-v1.json").read_text(encoding="utf-8"))
     gateway = engine(tmp_path, None)

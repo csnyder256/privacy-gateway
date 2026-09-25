@@ -239,6 +239,34 @@ test("money recognition is bounded and generalization is compact", async () => {
   assert.equal(result.text, "$~10^3");
 });
 
+// Mirrored in tests/test_engine.py; keep the two tables identical.
+test("money generalization counts whole units only", async () => {
+  const cases: [string, string][] = [
+    ["$1,284.50", "$~10^3"],
+    ["$1,284", "$~10^3"],
+    ["$1284.5", "$~10^3"],
+    ["$1,234,567.89", "$~10^6"],
+    ["$1,234.567", "$~10^3"],
+    ["$1.2345", "$~10^0"],
+    ["$0.99", "$~10^0"],
+    ["$007.50", "$~10^0"],
+    ["€1.284,50", "€~10^3"],
+    ["€1 284,50", "€~10^3"],
+    ["€1.284", "€~10^3"],
+    ["€1.234.567,89", "€~10^6"],
+    ["€1 234 567", "€~10^6"],
+    ["£12.5", "£~10^1"],
+    ["1,284.50 USD", "~10^3"],
+    ["1.234.567 EUR", "~10^6"],
+    ["12,5 GBP", "~10^1"],
+  ];
+  const policy = policyFromPreset("balanced");
+  for (const [source, expected] of cases) {
+    const result = await transform(`Paid ${source} today.`, policy, new Uint8Array(32));
+    assert.equal(result.text, `Paid ${expected} today.`, source);
+  }
+});
+
 test("stream restorer bounds malformed suffixes and leaves foreign tags", () => {
   const foreign = "[[PG1|EMAIL_ADDRESS|AAAAAAAAAAAAAAAAAAAAAAAAAA|AAAAAAAAAAAAAAAA]]";
   const stream = new StreamingRestorer({});
