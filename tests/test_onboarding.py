@@ -1,10 +1,11 @@
+import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
 from privacy_gateway import __version__
 from privacy_gateway.models import Action, EntityType
 from privacy_gateway.policies import PRESETS
-from scripts.assemble_site import assemble
 
 STATIC = Path("src/privacy_gateway/static")
 
@@ -73,7 +74,9 @@ def test_topbar_shows_the_package_version():
 
 
 def test_pages_artifact_shows_the_release_tag(tmp_path):
-    assemble(tmp_path, "v9.8.7")
+    subprocess.run(
+        [sys.executable, "scripts/assemble_site.py", str(tmp_path), "v9.8.7"], check=True
+    )
     html = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert '<span class="topbar-meta">v9.8.7 / MIT</span>' in html
     assert "__PRIVACY_GATEWAY_VERSION__" not in html
