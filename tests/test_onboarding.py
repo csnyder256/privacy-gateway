@@ -1,8 +1,10 @@
+import tomllib
 from pathlib import Path
 
 from privacy_gateway import __version__
 from privacy_gateway.models import Action, EntityType
 from privacy_gateway.policies import PRESETS
+from scripts.assemble_site import assemble
 
 STATIC = Path("src/privacy_gateway/static")
 
@@ -59,13 +61,21 @@ def test_accessibility_and_pages_assets_are_wired():
     assert ":focus-visible" in css
     assert "prefers-reduced-motion" in css
     assert ".entity-row .reversible,.entity-row .confidence{display:none}" not in css
-    assert "_site/assets/app.css" in workflow
-    assert "_site/assets/app.js" in workflow
+    assert 'tags: ["v*"]' in workflow
+    assert "scripts/assemble_site.py _site" in workflow
 
 
 def test_topbar_shows_the_package_version():
     html = (STATIC / "index.html").read_text(encoding="utf-8")
-    assert f'<span class="topbar-meta">v{__version__} / MIT</span>' in html, (
-        "Bump the version in src/privacy_gateway/static/index.html with the package version; "
-        "the Pages site republishes from it when the bump lands on main."
-    )
+    assert '<span class="topbar-meta">v__PRIVACY_GATEWAY_VERSION__ / MIT</span>' in html
+    metadata = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    assert __version__ == metadata["project"]["version"]
+
+
+def test_pages_artifact_shows_the_release_tag(tmp_path):
+    assemble(tmp_path, "v9.8.7")
+    html = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert '<span class="topbar-meta">v9.8.7 / MIT</span>' in html
+    assert "__PRIVACY_GATEWAY_VERSION__" not in html
+    for asset in ("app.css", "app.js", "favicon.svg"):
+        assert (tmp_path / "assets" / asset).is_file()

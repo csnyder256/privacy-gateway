@@ -178,7 +178,7 @@ npm test
 npm run build
 ```
 
-Current local release gate: 107 Python tests and 22 TypeScript tests, plus Python lint/format,
+The local release gate covers the Python and TypeScript suites, Python lint/format,
 TypeScript typecheck/build, package build, CLI probes, browser onboarding, and container smoke
 tests. This is not a third-party security certification.
 

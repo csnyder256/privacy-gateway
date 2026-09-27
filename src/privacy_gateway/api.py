@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 from cryptography.exceptions import InvalidTag
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
@@ -178,7 +178,8 @@ def create_app(database_path: str | None = None) -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def onboarding():
-        return FileResponse(static_path / "index.html")
+        html = (static_path / "index.html").read_text(encoding="utf-8")
+        return HTMLResponse(html.replace("__PRIVACY_GATEWAY_VERSION__", __version__))
 
     return app
 

@@ -1,10 +1,13 @@
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../src/privacy_gateway/static/", import.meta.url));
+const packageMetadata = await readFile(new URL("../pyproject.toml", import.meta.url), "utf8");
+const version = packageMetadata.match(/^version = "(\d+\.\d+\.\d+)"$/mu)?.[1];
+if (!version) throw new Error("Cannot read package version from pyproject.toml");
 const types = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".svg": "image/svg+xml" };
 
 createServer(async (request, response) => {
@@ -19,7 +22,12 @@ createServer(async (request, response) => {
     const details = await stat(path);
     if (!details.isFile()) throw new Error("not a file");
     response.writeHead(200, { "content-type": types[extname(path)] ?? "application/octet-stream" });
-    createReadStream(path).pipe(response);
+    if (relative === "index.html") {
+      const html = await readFile(path, "utf8");
+      response.end(html.replace("__PRIVACY_GATEWAY_VERSION__", version));
+    } else {
+      createReadStream(path).pipe(response);
+    }
   } catch {
     response.writeHead(404).end();
   }

@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from privacy_gateway import __version__
 from privacy_gateway.api import create_app
 from privacy_gateway.crypto import generate_key
 
@@ -10,6 +11,7 @@ def test_onboarding_and_health_are_served(tmp_path):
     page = client.get("/")
     assert page.status_code == 200
     assert "Build a policy" in page.text
+    assert f'<span class="topbar-meta">v{__version__} / MIT</span>' in page.text
     assert client.get("/assets/app.css").status_code == 200
 
 

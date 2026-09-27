@@ -8,9 +8,9 @@ minor version and fixes raise the patch version.
 
 ### Fixed
 - The onboarding page's top bar still said `v0.1`, both on the published site and
-  under `privacy-gateway serve`. It now shows the package version, and a test fails
-  when the two drift apart. A release's version bump therefore updates the page,
-  and the Pages workflow republishes it when the bump reaches `main`. Two
+  under `privacy-gateway serve`. The served page now reads the installed package
+  version. GitHub Pages now builds from the latest release tag on pushes to `main`
+  and on new tags, so future release bumps do not require editing the HTML. Two
   policy-builder hints no longer name a version either.
 - MONEY `generalize` (the Balanced preset's MONEY action) counted the digits after the
   decimal mark as part of the amount, so `$1,284.50` became `$~10^5`, 100 times too large.
@@ -20,6 +20,10 @@ minor version and fixes raise the patch version.
   decimal-comma amounts such as `€1.284,50` and `€1 284,50` become `€~10^3` too. The Python
   engine and `@privacy-gateway/core` share the rule, and `conformance/core-v1.json` now has
   MONEY cases that both must pass.
+
+### Changed
+- The README boundary animation now shows values moving through the policy gate,
+  transforming from raw inputs to protected outputs in a continuous loop.
 
 ## 0.4.0 - 2026-09-25
 
