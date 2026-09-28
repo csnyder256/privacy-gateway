@@ -1,8 +1,8 @@
 import json
-from pathlib import Path
 
 import httpx
 import pytest
+from conftest import repo_path
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
@@ -530,7 +530,7 @@ def test_proxy_rejects_upstream_redirects_and_non_json(
 
 def test_mcp_surface_is_exact():
     """The tool set is frozen by the compatibility manifest, not by the code."""
-    manifest = json.loads(Path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
+    manifest = json.loads(repo_path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
     names = set(manifest["adapters"]["mcp_tools"])
     assert names == {
         "protect_text",
@@ -539,7 +539,7 @@ def test_mcp_surface_is_exact():
         "inspect_policy",
         "verify_round_trip",
     }
-    source = Path("src/privacy_gateway/mcp_server.py").read_text(encoding="utf-8")
+    source = repo_path("src/privacy_gateway/mcp_server.py").read_text(encoding="utf-8")
     assert {name for name in names if f"def {name}(" in source} == names
     # Every tool is registered through tool(), which attaches its annotations.
     assert source.count("    @tool\n") == len(names)
