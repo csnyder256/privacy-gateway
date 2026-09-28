@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from typing import ClassVar, Protocol
 from urllib.parse import urlsplit
 
-from .models import Action, Detection, EntityType, Policy
+from .models import Action, Detection, EntityType, Policy, PolicyRule
 
 
 class DetectionFailure(RuntimeError):
@@ -221,6 +221,20 @@ def _scope_matches(rule_scopes: list[str], scope: str) -> bool:
     return "*" in rule_scopes or scope in rule_scopes
 
 
+def _scope_selected(policy: Policy, scope: str) -> dict[EntityType, PolicyRule]:
+    """Rules that apply at all in this scope, whether or not a scope selects them.
+
+    Scope narrowing decides *where* a rule's replacement applies; it is not a
+    switch that removes the rule's entity from the transform. Dropping the rule
+    here made the entity invisible to every per-scope consumer: an allow term
+    could no longer retire a value the user had declared safe, and a required
+    detector went unchecked in a transform that still had the entity enabled.
+    """
+    return {
+        rule.entity: rule for rule in policy.rules if rule.enabled and rule.action != Action.KEEP
+    }
+
+
 def resolve_detections(
     text: str,
     policy: Policy,
@@ -228,11 +242,13 @@ def resolve_detections(
     *,
     scope: str = "text",
 ) -> list[Detection]:
-    active_rules = {
-        rule.entity: rule
-        for rule in policy.rules
-        if rule.enabled and rule.action != Action.KEEP and _scope_matches(rule.scopes, scope)
-    }
+    # Detection is deliberately scope-independent. Recognizers see the whole
+    # value here and `PrivacyEngine.transform` decides whether this rule claims
+    # this scope when it applies a replacement. Keeping that decision out of
+    # detection is what lets an allow term (a statement about the value, not
+    # about one path) apply everywhere, and stops a required detector's health
+    # check from disappearing along with the scope that happened to select it.
+    active_rules = _scope_selected(policy, scope)
     entities = set(active_rules)
     candidates: list[Detection] = []
     available = {detector.name for detector in detectors}

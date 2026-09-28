@@ -7,6 +7,23 @@ minor version and fixes raise the patch version.
 ## Unreleased
 
 ### Fixed
+- A rule's scope silently disabled the rule. `scopes` selects *where* a rule's
+  replacement lands; the code treated it as a switch that removed the rule's entity
+  from the transform, so anything reached through another scope lost the rule
+  entirely. The visible casualty was the policy's own `required_detectors`: a policy
+  that names a detector for an enabled entity was checked only in a transform whose
+  scope the rule happened to select, so `{"required_detectors": ["presidio-v1"],
+  "scopes": ["json:/other"]}` protected the text and forwarded it without the
+  detector — `fail_closed` is fixed `True` on `Policy`, and this was the way around
+  it. The same dropped rule also stopped an `allow_terms` entry from retiring its
+  value in any scope the rule did not name. Detection is now scope-independent and
+  the scope check happens where a replacement is applied: a rule that does not claim
+  the current scope still leaves its matches unchanged and unaudited, exactly as
+  before, but it stays present for the required-detector check and for the allow
+  list. Both runtimes changed, and `conformance/core-v1.json` gained four `scopes`
+  fixtures that Python and `@privacy-gateway/core` must both pass. The TypeScript
+  core's `transform` now takes the caller's `scope` (defaulting to `"text"`, so
+  existing calls are unchanged).
 - The onboarding page's top bar still said `v0.1`, both on the published site and
   under `privacy-gateway serve`. The served page now reads the installed package
   version. GitHub Pages now builds from the latest release tag on pushes to `main`
