@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
 
+from .detectors import DetectionFailure
 from .engine import TOKEN_RE, PrivacyEngine
 from .models import TransformState
 
@@ -445,7 +446,17 @@ class PrivacyASGIMiddleware:
                 ).encode()
             else:
                 raise AdapterBlocked("middleware supports only JSON and text bodies")
-        except (UnicodeDecodeError, json.JSONDecodeError, AdapterBlocked, ValueError) as exc:
+        except (
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+            AdapterBlocked,
+            ValueError,
+            DetectionFailure,
+        ) as exc:
+            # A blocked transform is fail-closed, not a server fault: transform_json
+            # raises DetectionFailure (a RuntimeError, not a ValueError) when a nested
+            # string cannot be protected, and left uncaught it would escape the ASGI app
+            # as a 500 instead of the documented 422.
             payload = json.dumps({"detail": str(exc)}).encode()
             await send(
                 {
