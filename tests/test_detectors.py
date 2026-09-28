@@ -1,5 +1,6 @@
 import json
-from pathlib import Path
+
+from conftest import repo_path
 
 from privacy_gateway.detectors import RegexDetector, resolve_detections
 from privacy_gateway.models import Action, EntityType, Policy, PolicyRule
@@ -87,7 +88,7 @@ def test_allow_list_wins_and_deny_list_adds_custom_detection():
 
 
 def test_shared_cross_runtime_detection_fixtures():
-    fixtures = json.loads(Path("conformance/core-v1.json").read_text(encoding="utf-8"))
+    fixtures = json.loads(repo_path("conformance/core-v1.json").read_text(encoding="utf-8"))
     for fixture in fixtures["detection"]:
         policy = policy_from_preset(fixture["preset"])
         found = resolve_detections(fixture["text"], policy, [RegexDetector()])

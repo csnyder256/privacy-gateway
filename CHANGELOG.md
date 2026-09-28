@@ -25,6 +25,16 @@ minor version and fixes raise the patch version.
 - The README boundary animation now shows values moving through the policy gate,
   transforming from raw inputs to protected outputs in a continuous loop.
 
+### Fixed
+- The Python suite no longer depends on the process working directory. The pytest
+  console entry point left the repository root off `sys.path`, so
+  `tests/test_onboarding.py` aborted collection of the whole module with
+  `ModuleNotFoundError: No module named 'scripts'`. Separately, the tests read
+  `contracts/`, `conformance/`, `src/`, `scripts/`, and `.github/` files through the
+  working directory. Tests now resolve those paths from the repository root via
+  `tests/conftest.py`, and a regression test collects the suite from a foreign
+  directory so the failure cannot return.
+
 ## 0.4.0 - 2026-09-25
 
 ### Added

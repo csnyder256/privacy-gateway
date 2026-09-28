@@ -1,13 +1,14 @@
 import subprocess
 import sys
 import tomllib
-from pathlib import Path
+
+from conftest import REPO_ROOT, repo_path
 
 from privacy_gateway import __version__
 from privacy_gateway.models import Action, EntityType
 from privacy_gateway.policies import PRESETS
 
-STATIC = Path("src/privacy_gateway/static")
+STATIC = repo_path("src/privacy_gateway/static")
 
 
 def test_wizard_manifest_covers_the_product_catalog():
@@ -55,7 +56,7 @@ def test_policy_schema_names_and_sample_privacy_are_explicit():
 def test_accessibility_and_pages_assets_are_wired():
     html = (STATIC / "index.html").read_text(encoding="utf-8")
     css = (STATIC / "app.css").read_text(encoding="utf-8")
-    workflow = Path(".github/workflows/pages.yml").read_text(encoding="utf-8")
+    workflow = repo_path(".github/workflows/pages.yml").read_text(encoding="utf-8")
     assert '<html lang="en">' in html
     assert 'aria-live="polite"' in html
     assert 'id="allow-terms"' in html and 'id="deny-terms"' in html
@@ -69,13 +70,20 @@ def test_accessibility_and_pages_assets_are_wired():
 def test_topbar_shows_the_package_version():
     html = (STATIC / "index.html").read_text(encoding="utf-8")
     assert '<span class="topbar-meta">v__PRIVACY_GATEWAY_VERSION__ / MIT</span>' in html
-    metadata = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    metadata = tomllib.loads(repo_path("pyproject.toml").read_text(encoding="utf-8"))
     assert __version__ == metadata["project"]["version"]
 
 
 def test_pages_artifact_shows_the_release_tag(tmp_path):
     subprocess.run(
-        [sys.executable, "scripts/assemble_site.py", str(tmp_path), "v9.8.7"], check=True
+        [
+            sys.executable,
+            str(repo_path("scripts/assemble_site.py")),
+            str(tmp_path),
+            "v9.8.7",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
     )
     html = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert '<span class="topbar-meta">v9.8.7 / MIT</span>' in html

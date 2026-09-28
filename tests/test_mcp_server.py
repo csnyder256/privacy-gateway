@@ -7,9 +7,9 @@ test_mcp_surface_is_exact) cannot catch an SDK rename, and one did happen.
 import asyncio
 import json
 import sqlite3
-from pathlib import Path
 
 import pytest
+from conftest import repo_path
 
 pytest.importorskip("mcp")
 
@@ -18,7 +18,7 @@ from privacy_gateway.engine import PrivacyEngine
 from privacy_gateway.mcp_server import build_server
 from privacy_gateway.vault import Vault
 
-MANIFEST = json.loads(Path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
+MANIFEST = json.loads(repo_path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
 TOOLS = set(MANIFEST["adapters"]["mcp_tools"])
 ANNOTATIONS = MANIFEST["adapters"]["mcp_tool_annotations"]
 HINTS = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
