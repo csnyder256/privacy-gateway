@@ -4,11 +4,11 @@ Tracked artifacts (manifests, conformance fixtures, the onboarding static root, 
 Pages workflow) are read from paths relative to the *repository*, never relative to
 the process working directory. Two problems are fixed here:
 
-1. Invoking pytest from outside the repository root — as the CI job does when it
-   calls ``pytest`` with an absolute path — made every repository-relative path miss.
-2. Python does not prepend the working directory to ``sys.path`` once an
-   already-initialised interpreter has run, so ``from scripts.assemble_site import …``
-   raised :class:`ModuleNotFoundError` under ``pytest`` even when the root was the cwd.
+1. Tests read tracked artifacts through the working directory, so invoking the
+   suite outside the repository made those paths miss.
+2. The pytest console entry point does not necessarily put the repository root
+   on ``sys.path``, so ``from scripts.assemble_site import …`` could fail during
+   collection even when the root was the working directory.
 
 ``REPO_ROOT`` is published for tests to build absolute paths from, and the
 repository root is placed on ``sys.path`` so repository-relative imports resolve

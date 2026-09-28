@@ -1,14 +1,13 @@
 """The suite must not depend on the process working directory.
 
-Two separate defects shared one cause: pytest was invoked in a way that left the
-repository root off ``sys.path``.
+Two separate portability defects are covered:
 
-* The CI job ran ``pytest --cov=…`` with the default rootdir resolution, so
+* The pytest console entry point left the repository root off ``sys.path``, so
   ``tests/test_onboarding.py`` (an import-time ``from scripts.assemble_site import
   assemble``) aborted collection for the whole module with ``ModuleNotFoundError``.
-* Every test that read a tracked artifact through a relative path such as
-  ``contracts/compatibility-v1.json`` silently depended on the cwd being the
-  repository root, so the same files were unreachable from any other directory.
+* Tests that read tracked artifacts through relative paths such as
+  ``contracts/compatibility-v1.json`` depended on the working directory being the
+  repository root.
 
 Both are pinned here: the shared helper resolves repository artifacts from
 ``tests/conftest.py``'s own location, and collection is exercised from a directory
