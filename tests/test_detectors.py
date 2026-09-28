@@ -3,8 +3,10 @@ import json
 from conftest import repo_path
 
 from privacy_gateway.detectors import RegexDetector, resolve_detections
+from privacy_gateway.engine import PrivacyEngine
 from privacy_gateway.models import Action, EntityType, Policy, PolicyRule
 from privacy_gateway.policies import policy_from_preset
+from privacy_gateway.vault import Vault
 
 
 def policy_for(*entities: EntityType) -> Policy:
@@ -102,3 +104,36 @@ def test_shared_cross_runtime_detection_fixtures():
             for item in found
         ]
         assert actual == fixture["expected"], fixture["name"]
+
+
+def test_shared_cross_runtime_scope_fixtures(tmp_path):
+    """A rule's scope narrows where it applies, not whether the rule exists.
+
+    The rule set a transform resolves against must not depend on the scope, or a
+    scoped-out rule loses its required-detector check and an allow term stops
+    retiring its value. TypeScript consumes the same fixtures.
+    """
+    fixtures = json.loads(Path("conformance/core-v1.json").read_text(encoding="utf-8"))
+    for fixture in fixtures["scopes"]:
+        policy = Policy(
+            name=fixture["name"],
+            rules=[
+                PolicyRule(
+                    entity=EntityType.EMAIL_ADDRESS,
+                    action=Action(fixture["action"]),
+                    reversible=False,
+                    scopes=list(fixture["scopes"]),
+                    required_detectors=list(fixture["required_detectors"]),
+                )
+            ],
+            allow_terms=list(fixture["allow_terms"]),
+        )
+        gateway = PrivacyEngine(
+            Vault(tmp_path / f"{fixture['name']}.db"),
+            detectors=[] if fixture["required_detectors"] else None,
+        )
+        result = gateway.transform(fixture["text"], policy=policy, scope=fixture["scope"])
+        assert result.state.value == fixture["expected_state"], fixture["name"]
+        assert result.text == fixture["expected_text"], fixture["name"]
+        if "expected_reason" in fixture:
+            assert result.reason == fixture["expected_reason"], fixture["name"]

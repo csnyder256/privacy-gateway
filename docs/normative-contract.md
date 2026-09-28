@@ -297,6 +297,15 @@ unless deny-listed; then required detector health/confidence applies; overlaps s
 by deny-list, policy priority, confidence ppm, longest byte span, earliest start,
 entity enum, detector ID. Remaining exact ties must produce the same decision.
 
+Scope narrows *where* a rule applies, never *whether* the rule exists. Recognizers
+run over the whole value and the rule set is scope-independent; a rule that does not
+select the current scope leaves its matches unchanged, unaudited, and with no
+replacement, while remaining present for every other consumer of the policy. A
+policy's `required_detectors` are therefore checked in every transform that has the
+entity enabled, regardless of which scope selects the rule, and an allow term removes
+its value in every scope: the term is a statement about the value, not about one
+rendering of it.
+
 Tolerant restoration is finite, not edit-distance guessing. Tagged tokens use only
 the case/space variants in the exact grammar above. Format-valid synthetics use
 entity canonicalizers already used

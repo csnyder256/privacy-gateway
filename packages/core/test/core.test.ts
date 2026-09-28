@@ -296,3 +296,37 @@ test("recursive restore leaves blocked subtrees untouched", async () => {
     list: [source, 3],
   });
 });
+
+test("shared scope fixtures: a rule's scope narrows where it applies, not whether it exists", async () => {
+  const fixtures = JSON.parse(await readFile(new URL("../../../conformance/core-v1.json", import.meta.url), "utf8"));
+  for (const fixture of fixtures.scopes) {
+    const policy: Policy = {
+      name: fixture.name,
+      version: 1,
+      rules: [{
+        entity: "EMAIL_ADDRESS",
+        action: fixture.action,
+        enabled: true,
+        reversible: false,
+        minimumConfidencePpm: 500_000,
+        priority: 0,
+        locale: "en-US",
+        scopes: [...fixture.scopes],
+        requiredDetectors: [...fixture.required_detectors],
+      }],
+      allowTerms: [...fixture.allow_terms],
+      denyTerms: {},
+      failClosed: true,
+      mappingRetentionSeconds: 86_400,
+      auditRetentionSeconds: 2_592_000,
+    };
+    const result = await transform(fixture.text, policy, undefined, fixture.scope);
+    assert.equal(result.state, fixture.expected_state, fixture.name);
+    assert.equal(result.text, fixture.expected_text, fixture.name);
+    if ("expected_reason" in fixture) {
+      // Python returns the message bare; this core returns String(error), which
+      // carries the "Error: " prefix. The reason itself is the contract.
+      assert.ok(result.reason?.includes(fixture.expected_reason), `${fixture.name}: ${result.reason}`);
+    }
+  }
+});

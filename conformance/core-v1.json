@@ -101,5 +101,52 @@
         {"entity": "EMAIL_ADDRESS", "start": 8, "end": 23, "value": "zoe@example.com"}
       ]
     }
+  ],
+  "scopes": [
+    {
+      "name": "scoped-rule-outside-its-scope-leaves-matches-unchanged",
+      "scope": "json:/allowed",
+      "text": "Contact a@example.com today.",
+      "action": "redact",
+      "scopes": ["json:/other"],
+      "required_detectors": [],
+      "allow_terms": [],
+      "expected_state": "protected",
+      "expected_text": "Contact a@example.com today."
+    },
+    {
+      "name": "scoped-rule-inside-its-scope-applies",
+      "scope": "json:/other",
+      "text": "Contact a@example.com today.",
+      "action": "redact",
+      "scopes": ["json:/other"],
+      "required_detectors": [],
+      "allow_terms": [],
+      "expected_state": "protected",
+      "expected_text": "Contact [REDACTED:EMAIL_ADDRESS] today."
+    },
+    {
+      "name": "required-detector-blocks-even-when-the-rule-is-scoped-elsewhere",
+      "scope": "json:/allowed",
+      "text": "Contact a@example.com today.",
+      "action": "redact",
+      "scopes": ["json:/other"],
+      "required_detectors": ["presidio-v1"],
+      "allow_terms": [],
+      "expected_state": "blocked",
+      "expected_text": null,
+      "expected_reason": "required detectors unavailable: presidio-v1"
+    },
+    {
+      "name": "allow-term-removes-its-value-in-every-scope",
+      "scope": "json:/allowed",
+      "text": "safe@example.com",
+      "action": "redact",
+      "scopes": ["json:/other"],
+      "required_detectors": [],
+      "allow_terms": ["safe@example.com"],
+      "expected_state": "protected",
+      "expected_text": "safe@example.com"
+    }
   ]
 }
