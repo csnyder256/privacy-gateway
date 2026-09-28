@@ -7,6 +7,23 @@ minor version and fixes raise the patch version.
 ## Unreleased
 
 ### Fixed
+- A rule's scope silently disabled the rule. `scopes` selects *where* a rule's
+  replacement lands; the code treated it as a switch that removed the rule's entity
+  from the transform, so anything reached through another scope lost the rule
+  entirely. The visible casualty was the policy's own `required_detectors`: a policy
+  that names a detector for an enabled entity was checked only in a transform whose
+  scope the rule happened to select, so `{"required_detectors": ["presidio-v1"],
+  "scopes": ["json:/other"]}` protected the text and forwarded it without the
+  detector — `fail_closed` is fixed `True` on `Policy`, and this was the way around
+  it. The same dropped rule also stopped an `allow_terms` entry from retiring its
+  value in any scope the rule did not name. Detection is now scope-independent and
+  the scope check happens where a replacement is applied: a rule that does not claim
+  the current scope still leaves its matches unchanged and unaudited, exactly as
+  before, but it stays present for the required-detector check and for the allow
+  list. Both runtimes changed, and `conformance/core-v1.json` gained four `scopes`
+  fixtures that Python and `@privacy-gateway/core` must both pass. The TypeScript
+  core's `transform` now takes the caller's `scope` (defaulting to `"text"`, so
+  existing calls are unchanged).
 - The onboarding page's top bar still said `v0.1`, both on the published site and
   under `privacy-gateway serve`. The served page now reads the installed package
   version. GitHub Pages now builds from the latest release tag on pushes to `main`
@@ -20,10 +37,26 @@ minor version and fixes raise the patch version.
   decimal-comma amounts such as `€1.284,50` and `€1 284,50` become `€~10^3` too. The Python
   engine and `@privacy-gateway/core` share the rule, and `conformance/core-v1.json` now has
   MONEY cases that both must pass.
+- The ASGI middleware returned a 500 instead of its fail-closed 422 when a nested
+  string could not be protected. `transform_json` reports a blocked transform by
+  raising `DetectionFailure`, which is a `RuntimeError` rather than a `ValueError`, so
+  it slipped past the middleware's `except` tuple and escaped the ASGI call. A
+  blocked JSON or text body now answers 422 with the reason, as the documented
+  fail-closed response requires; a regression test covers both body types.
 
 ### Changed
 - The README boundary animation now shows values moving through the policy gate,
   transforming from raw inputs to protected outputs in a continuous loop.
+
+### Fixed
+- The Python suite no longer depends on the process working directory. The pytest
+  console entry point left the repository root off `sys.path`, so
+  `tests/test_onboarding.py` aborted collection of the whole module with
+  `ModuleNotFoundError: No module named 'scripts'`. Separately, the tests read
+  `contracts/`, `conformance/`, `src/`, `scripts/`, and `.github/` files through the
+  working directory. Tests now resolve those paths from the repository root via
+  `tests/conftest.py`, and a regression test collects the suite from a foreign
+  directory so the failure cannot return.
 
 ## 0.4.0 - 2026-09-25
 

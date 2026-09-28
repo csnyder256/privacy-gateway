@@ -318,13 +318,24 @@ function validUrl(value: string): boolean {
   }
 }
 
-export function detect(text: string, policy: Policy, scope = "text"): Detection[] {
-  validatePolicy(policy);
-  const active = new Map(
+// Rules that apply at all, whether or not a scope selects them. Scope narrowing
+// decides *where* a rule's replacement lands; it is not a switch that removes the
+// rule's entity from the transform. Dropping the rule here made the entity
+// invisible to every per-scope consumer: a required detector went unchecked in a
+// transform that still had the entity enabled, and an allow term could no longer
+// retire a value the user had declared safe. The engine's `transform` applies the
+// scope check when it applies a replacement.
+function scopedRules(policy: Policy): Map<EntityType, PolicyRule> {
+  return new Map(
     policy.rules
-      .filter((rule) => rule.enabled && rule.action !== "keep" && (rule.scopes.includes("*") || rule.scopes.includes(scope)))
+      .filter((rule) => rule.enabled && rule.action !== "keep")
       .map((rule) => [rule.entity, rule]),
   );
+}
+
+export function detect(text: string, policy: Policy, scope = "text"): Detection[] {
+  validatePolicy(policy);
+  const active = scopedRules(policy);
   const candidates: Detection[] = [];
   const unavailable = [...active.values()]
     .flatMap((rule) => rule.requiredDetectors)
@@ -385,6 +396,8 @@ export function detect(text: string, policy: Policy, scope = "text"): Detection[
     const leftRule = active.get(left.entity)!;
     const rightRule = active.get(right.entity)!;
     return (
+      Number(!leftRule.scopes.includes("*") && !leftRule.scopes.includes(scope)) -
+        Number(!rightRule.scopes.includes("*") && !rightRule.scopes.includes(scope)) ||
       Number(left.detector !== "deny-list") - Number(right.detector !== "deny-list") ||
       rightRule.priority - leftRule.priority ||
       right.confidencePpm - left.confidencePpm ||
@@ -578,7 +591,12 @@ function generalize(item: Detection): string {
   return `[${item.entity}]`;
 }
 
-export async function transform(text: string, policy: Policy, key?: Uint8Array): Promise<TransformResult> {
+export async function transform(
+  text: string,
+  policy: Policy,
+  key?: Uint8Array,
+  scope = "text",
+): Promise<TransformResult> {
   try {
     validatePolicy(policy);
   } catch (error) {
@@ -591,7 +609,7 @@ export async function transform(text: string, policy: Policy, key?: Uint8Array):
   const operationKey = key ?? crypto.getRandomValues(new Uint8Array(32));
   let found: Detection[];
   try {
-    found = detect(text, policy);
+    found = detect(text, policy, scope);
   } catch (error) {
     return { state: "blocked", text: null, detections: [], reverse: {}, reason: String(error) };
   }
@@ -602,6 +620,10 @@ export async function transform(text: string, policy: Policy, key?: Uint8Array):
   let output = "";
   for (const item of found) {
     const rule = policy.rules.find((candidate) => candidate.entity === item.entity)!;
+    // Detected so an allow term could retire it, but this rule does not claim
+    // this scope: the value is forwarded unchanged, and nothing is recorded for a
+    // decision the policy never made.
+    if (!rule.scopes.includes("*") && !rule.scopes.includes(scope)) continue;
     const identity = `${item.entity}\0${item.value}`;
     let replacement = seen.get(identity);
     if (!replacement) {

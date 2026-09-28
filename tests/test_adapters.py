@@ -1,8 +1,8 @@
 import json
-from pathlib import Path
 
 import httpx
 import pytest
+from conftest import repo_path
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
@@ -471,6 +471,34 @@ def test_asgi_middleware_rewrites_json_text_and_content_length(engine):
     assert int(text_response["content_length"]) == text_response["actual"]
 
 
+def test_asgi_middleware_fails_closed_on_a_blocked_transform(tmp_path):
+    """A blocked nested transform is a fail-closed 422, not an escaping 500.
+
+    ``transform_json`` raises ``DetectionFailure`` -- a ``RuntimeError``, not a
+    ``ValueError`` -- so a keyless engine with a reversible preset must still make the
+    middleware answer 422 with the reason instead of letting the exception escape the
+    ASGI call.
+    """
+    downstream = FastAPI()
+
+    @downstream.post("/echo")
+    async def echo(request: Request):
+        return {"body": (await request.body()).decode()}
+
+    keyless = PrivacyEngine(Vault(tmp_path / "keyless.db"))
+    wrapped = PrivacyASGIMiddleware(downstream, keyless)
+    client = TestClient(wrapped, raise_server_exceptions=False)
+    response = client.post("/echo", json={"message": "Email a@b.com"})
+    assert response.status_code == 422
+    assert "reversible policy requires" in response.json()["detail"]
+
+    text_response = client.post(
+        "/echo", content="Email a@b.com", headers={"content-type": "text/plain"}
+    )
+    assert text_response.status_code == 422
+    assert "reversible policy requires" in text_response.json()["detail"]
+
+
 def test_proxy_endpoint_body_limit_and_non_json(monkeypatch, tmp_path):
     monkeypatch.setenv("PRIVACY_GATEWAY_OPENAI_UPSTREAM", "https://api.example/v1")
     monkeypatch.setenv("PRIVACY_GATEWAY_MAX_BODY_BYTES", "32")
@@ -530,7 +558,7 @@ def test_proxy_rejects_upstream_redirects_and_non_json(
 
 def test_mcp_surface_is_exact():
     """The tool set is frozen by the compatibility manifest, not by the code."""
-    manifest = json.loads(Path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
+    manifest = json.loads(repo_path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))
     names = set(manifest["adapters"]["mcp_tools"])
     assert names == {
         "protect_text",
@@ -539,7 +567,7 @@ def test_mcp_surface_is_exact():
         "inspect_policy",
         "verify_round_trip",
     }
-    source = Path("src/privacy_gateway/mcp_server.py").read_text(encoding="utf-8")
+    source = repo_path("src/privacy_gateway/mcp_server.py").read_text(encoding="utf-8")
     assert {name for name in names if f"def {name}(" in source} == names
     # Every tool is registered through tool(), which attaches its annotations.
     assert source.count("    @tool\n") == len(names)

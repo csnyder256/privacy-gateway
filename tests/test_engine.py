@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 import pytest
+from conftest import repo_path
 
 from privacy_gateway.crypto import decode_key, generate_key
 from privacy_gateway.detectors import RegexDetector
@@ -260,7 +261,7 @@ def test_money_generalization_counts_whole_units_only(tmp_path, source, expected
 
 
 def test_shared_cross_runtime_operator_fixtures(tmp_path):
-    fixtures = json.loads(Path("conformance/core-v1.json").read_text(encoding="utf-8"))
+    fixtures = json.loads(repo_path("conformance/core-v1.json").read_text(encoding="utf-8"))
     gateway = engine(tmp_path, None)
     for fixture in fixtures["operators"]:
         policy = Policy(

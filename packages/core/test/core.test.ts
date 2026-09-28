@@ -296,3 +296,59 @@ test("recursive restore leaves blocked subtrees untouched", async () => {
     list: [source, 3],
   });
 });
+
+test("shared scope fixtures: a rule's scope narrows where it applies, not whether it exists", async () => {
+  const fixtures = JSON.parse(await readFile(new URL("../../../conformance/core-v1.json", import.meta.url), "utf8"));
+  for (const fixture of fixtures.scopes) {
+    const policy: Policy = {
+      name: fixture.name,
+      version: 1,
+      rules: [{
+        entity: "EMAIL_ADDRESS",
+        action: fixture.action,
+        enabled: true,
+        reversible: false,
+        minimumConfidencePpm: 500_000,
+        priority: 0,
+        locale: "en-US",
+        scopes: [...fixture.scopes],
+        requiredDetectors: [...fixture.required_detectors],
+      }],
+      allowTerms: [...fixture.allow_terms],
+      denyTerms: {},
+      failClosed: true,
+      mappingRetentionSeconds: 86_400,
+      auditRetentionSeconds: 2_592_000,
+    };
+    const result = await transform(fixture.text, policy, undefined, fixture.scope);
+    assert.equal(result.state, fixture.expected_state, fixture.name);
+    assert.equal(result.text, fixture.expected_text, fixture.name);
+    if ("expected_reason" in fixture) {
+      // Python returns the message bare; this core returns String(error), which
+      // carries the "Error: " prefix. The reason itself is the contract.
+      assert.ok(result.reason?.includes(fixture.expected_reason), `${fixture.name}: ${result.reason}`);
+    }
+  }
+});
+
+
+test("an out-of-scope URL cannot suppress an in-scope email", async () => {
+  const text = "https://example.com/contact/a@example.com";
+  for (const deny of [false, true]) {
+    const policy = policyFromPreset("balanced");
+    policy.rules = policy.rules.filter((rule) => ["EMAIL_ADDRESS", "URL"].includes(rule.entity));
+    for (const rule of policy.rules) {
+      rule.action = "redact";
+      rule.reversible = false;
+      rule.scopes = rule.entity === "EMAIL_ADDRESS" ? ["text"] : ["json:/other"];
+      rule.priority = rule.entity === "EMAIL_ADDRESS" ? 10 : 100;
+    }
+    policy.denyTerms = deny ? { [text]: "URL" } : {};
+    const result = await transform(text, policy);
+    assert.equal(result.text, "https://example.com/contact/[REDACTED:EMAIL_ADDRESS]");
+    assert.deepEqual(result.detections.map((item) => item.entity), ["EMAIL_ADDRESS"]);
+    policy.rules.find((rule) => rule.entity === "URL")!.scopes = ["text"];
+    policy.denyTerms = { [text]: "URL" };
+    assert.equal((await transform(text, policy)).text, "[REDACTED:URL]");
+  }
+});

@@ -10,7 +10,13 @@ from collections.abc import Iterable
 from typing import Any
 
 from .crypto import decode_key, open_json, seal_json
-from .detectors import DetectionFailure, Detector, default_detectors, resolve_detections
+from .detectors import (
+    DetectionFailure,
+    Detector,
+    _scope_matches,
+    default_detectors,
+    resolve_detections,
+)
 from .models import (
     Action,
     AppliedDetection,
@@ -300,6 +306,11 @@ class PrivacyEngine:
         for detection in detections:
             rule = selected.rule_for(detection.entity)
             if rule is None or rule.action == Action.KEEP:
+                continue
+            if not _scope_matches(rule.scopes, scope):
+                # Detected so an allow term could retire it, but this rule does
+                # not claim this scope: the value is forwarded unchanged, and
+                # nothing is recorded for a decision the policy never made.
                 continue
             lookup_key = (detection.entity, detection.value)
             replacement: str
