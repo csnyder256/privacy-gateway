@@ -242,7 +242,9 @@ def resolve_detections(
     *,
     scope: str = "text",
 ) -> list[Detection]:
-    # Detection is deliberately scope-independent. Recognizers see the whole
+    # Recognizers and required-detector health checks remain global.
+    # Scope selection must precede overlap precedence: a scoped-out match
+    # cannot suppress protection that applies here. Recognizers see the whole
     # value here and `PrivacyEngine.transform` decides whether this rule claims
     # this scope when it applies a replacement. Keeping that decision out of
     # detection is what lets an allow term (a statement about the value, not
@@ -288,6 +290,7 @@ def resolve_detections(
     ]
     eligible.sort(
         key=lambda item: (
+            not _scope_matches(active_rules[item.entity].scopes, scope),
             item.detector != "deny-list",
             -active_rules[item.entity].priority,
             -item.confidence_ppm,

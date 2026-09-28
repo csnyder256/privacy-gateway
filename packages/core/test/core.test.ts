@@ -330,3 +330,25 @@ test("shared scope fixtures: a rule's scope narrows where it applies, not whethe
     }
   }
 });
+
+
+test("an out-of-scope URL cannot suppress an in-scope email", async () => {
+  const text = "https://example.com/contact/a@example.com";
+  for (const deny of [false, true]) {
+    const policy = policyFromPreset("balanced");
+    policy.rules = policy.rules.filter((rule) => ["EMAIL_ADDRESS", "URL"].includes(rule.entity));
+    for (const rule of policy.rules) {
+      rule.action = "redact";
+      rule.reversible = false;
+      rule.scopes = rule.entity === "EMAIL_ADDRESS" ? ["text"] : ["json:/other"];
+      rule.priority = rule.entity === "EMAIL_ADDRESS" ? 10 : 100;
+    }
+    policy.denyTerms = deny ? { [text]: "URL" } : {};
+    const result = await transform(text, policy);
+    assert.equal(result.text, "https://example.com/contact/[REDACTED:EMAIL_ADDRESS]");
+    assert.deepEqual(result.detections.map((item) => item.entity), ["EMAIL_ADDRESS"]);
+    policy.rules.find((rule) => rule.entity === "URL")!.scopes = ["text"];
+    policy.denyTerms = { [text]: "URL" };
+    assert.equal((await transform(text, policy)).text, "[REDACTED:URL]");
+  }
+});

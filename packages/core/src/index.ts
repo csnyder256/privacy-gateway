@@ -396,6 +396,8 @@ export function detect(text: string, policy: Policy, scope = "text"): Detection[
     const leftRule = active.get(left.entity)!;
     const rightRule = active.get(right.entity)!;
     return (
+      Number(!leftRule.scopes.includes("*") && !leftRule.scopes.includes(scope)) -
+        Number(!rightRule.scopes.includes("*") && !rightRule.scopes.includes(scope)) ||
       Number(left.detector !== "deny-list") - Number(right.detector !== "deny-list") ||
       rightRule.priority - leftRule.priority ||
       right.confidencePpm - left.confidencePpm ||

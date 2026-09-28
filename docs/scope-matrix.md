@@ -39,3 +39,13 @@ integrate it but cannot silently redefine its acceptance bar.
 - Training or bundling SDV or reimplementing its private/internal architecture.
 - Claiming production image protection before an image adapter passes Stage 1.
 - Supporting arbitrary proxy upstream URLs supplied per request.
+
+
+## Overlapping detections across scopes
+
+Required detector availability is checked across the whole policy. Overlap
+selection gives detections that apply to the current scope precedence over
+out-of-scope matches. A URL rule for another scope therefore cannot hide an
+in-scope email inside the URL. Within the same scope, deny, priority, confidence
+and match length retain their existing order. Python and TypeScript share this
+contract.

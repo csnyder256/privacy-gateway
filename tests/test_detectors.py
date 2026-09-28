@@ -113,7 +113,7 @@ def test_shared_cross_runtime_scope_fixtures(tmp_path):
     scoped-out rule loses its required-detector check and an allow term stops
     retiring its value. TypeScript consumes the same fixtures.
     """
-    fixtures = json.loads(Path("conformance/core-v1.json").read_text(encoding="utf-8"))
+    fixtures = json.loads(repo_path("conformance", "core-v1.json").read_text(encoding="utf-8"))
     for fixture in fixtures["scopes"]:
         policy = Policy(
             name=fixture["name"],
