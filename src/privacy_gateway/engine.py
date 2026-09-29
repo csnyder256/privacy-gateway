@@ -233,6 +233,7 @@ class PrivacyEngine:
         policy: Policy,
         reason: str,
         source_hash: str,
+        policy_trace: dict | None = None,
     ) -> TransformResponse:
         self.vault.audit(
             "transform",
@@ -249,6 +250,9 @@ class PrivacyEngine:
             policy_version=policy.version,
             detections=[],
             reason=reason,
+            policy_trace={**policy_trace, "state": "blocked", "gate": reason}
+            if policy_trace is not None
+            else None,
         )
 
     def transform(
@@ -261,11 +265,51 @@ class PrivacyEngine:
         restore_key: str | None = None,
         metadata: dict[str, Any] | None = None,
         scope: str = "text",
+        include_policy_trace: bool = False,
     ) -> TransformResponse:
         if session_id:
             selected = policy or self.vault.policy_for(session_id)
         else:
             session_id, selected = self.create_session(policy, preset, metadata)
+        trace = None
+        if include_policy_trace:
+            trace = {
+                "schema": "privacy-gateway.policy-trace",
+                "version": 1,
+                "state": "evaluating",
+                "scope": scope,
+                "detection_complete": False,
+                "detectors": sorted(detector.name for detector in self.detectors),
+                "rules": [
+                    {
+                        "entity": rule.entity.value,
+                        "enabled": rule.enabled,
+                        "action": rule.action.value,
+                        "reversible": rule.reversible,
+                        "scan_enabled": rule.enabled and rule.action != Action.KEEP,
+                        "scope_claimed": _scope_matches(rule.scopes, scope),
+                        "minimum_confidence_ppm": rule.minimum_confidence_ppm,
+                        "required_detectors": rule.required_detectors,
+                    }
+                    for rule in selected.rules
+                ],
+                "decisions": [],
+                "precedence": [
+                    "scope claimed",
+                    "deny list",
+                    "priority",
+                    "confidence",
+                    "longer span",
+                    "earlier span",
+                    "entity",
+                    "detector",
+                ],
+                "limitations": [
+                    "Disabled and keep rules are not scanned.",
+                    "No findings does not prove absence of sensitive data.",
+                    "Trace excludes original values, replacements, allow/deny terms, keys and capsules.",
+                ],
+            }
         client_key = decode_key(restore_key) if restore_key else None
         operation_key = client_key or self.vault.master_key or secrets.token_bytes(32)
         replacement_key = operation_key
@@ -285,15 +329,19 @@ class PrivacyEngine:
                 policy=selected,
                 reason="reversible policy requires a server master key or client restore key",
                 source_hash=source_hash,
+                policy_trace=trace,
             )
         try:
-            detections = resolve_detections(text, selected, self.detectors, scope=scope)
+            detections = resolve_detections(
+                text, selected, self.detectors, scope=scope, trace=trace
+            )
         except DetectionFailure as exc:
             return self._blocked(
                 session_id=session_id,
                 policy=selected,
                 reason=str(exc),
                 source_hash=source_hash,
+                policy_trace=trace,
             )
 
         reverse: dict[str, str] = {}
@@ -357,6 +405,7 @@ class PrivacyEngine:
                             policy=selected,
                             reason="unable to allocate a unique replacement",
                             source_hash=source_hash,
+                            policy_trace=trace,
                         )
                 call_mappings[lookup_key] = (replacement, mapping_id)
 
@@ -404,6 +453,10 @@ class PrivacyEngine:
             session_id,
             selected.audit_retention_seconds,
         )
+        if trace is not None:
+            for decision in trace["decisions"]:
+                if decision["outcome"] == "selected":
+                    decision["outcome"] = "applied"
         return TransformResponse(
             text=output,
             state=TransformState.PROTECTED,
@@ -412,6 +465,9 @@ class PrivacyEngine:
             policy_version=selected.version,
             detections=applied,
             capsule=capsule,
+            policy_trace={**trace, "state": "protected", "applied_count": len(applied)}
+            if trace is not None
+            else None,
         )
 
     @staticmethod

@@ -241,6 +241,7 @@ def resolve_detections(
     detectors: Iterable[Detector],
     *,
     scope: str = "text",
+    trace: dict | None = None,
 ) -> list[Detection]:
     # Recognizers and required-detector health checks remain global.
     # Scope selection must precede overlap precedence: a scoped-out match
@@ -250,6 +251,7 @@ def resolve_detections(
     # detection is what lets an allow term (a statement about the value, not
     # about one path) apply everywhere, and stops a required detector's health
     # check from disappearing along with the scope that happened to select it.
+    detectors = list(detectors)
     active_rules = _scope_selected(policy, scope)
     entities = set(active_rules)
     candidates: list[Detection] = []
@@ -281,13 +283,38 @@ def resolve_detections(
             )
 
     allow = {term.casefold() for term in policy.allow_terms}
-    eligible = [
-        item
-        for item in candidates
-        if item.entity in active_rules
-        and item.confidence_ppm >= active_rules[item.entity].minimum_confidence_ppm
-        and item.value.casefold() not in allow
-    ]
+
+    def decision(item: Detection, outcome: str) -> None:
+        if trace is None:
+            return
+        rule = active_rules.get(item.entity)
+        trace["decisions"].append(
+            {
+                "entity": item.entity.value,
+                "start": item.start,
+                "end": item.end,
+                "offset_unit": "UTF-8 bytes",
+                "detector": item.detector,
+                "confidence_ppm": item.confidence_ppm,
+                "minimum_confidence_ppm": rule.minimum_confidence_ppm if rule else None,
+                "priority": rule.priority if rule else None,
+                "action": rule.action.value if rule else None,
+                "outcome": outcome,
+            }
+        )
+
+    if trace is not None:
+        trace["detection_complete"] = True
+    eligible = []
+    for item in candidates:
+        if item.entity not in active_rules:
+            decision(item, "inactive_rule")
+        elif item.confidence_ppm < active_rules[item.entity].minimum_confidence_ppm:
+            decision(item, "below_confidence")
+        elif item.value.casefold() in allow:
+            decision(item, "allowed_value")
+        else:
+            eligible.append(item)
     eligible.sort(
         key=lambda item: (
             not _scope_matches(active_rules[item.entity].scopes, scope),
@@ -303,8 +330,15 @@ def resolve_detections(
     accepted: list[Detection] = []
     for candidate in eligible:
         if any(candidate.start < item.end and item.start < candidate.end for item in accepted):
+            decision(candidate, "overlap_suppressed")
             continue
         accepted.append(candidate)
+        decision(
+            candidate,
+            "selected"
+            if _scope_matches(active_rules[candidate.entity].scopes, scope)
+            else "scope_not_claimed",
+        )
     return sorted(accepted, key=lambda item: item.start)
 
 

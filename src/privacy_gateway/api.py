@@ -52,6 +52,20 @@ def create_app(database_path: str | None = None) -> FastAPI:
             "persistent_restoration": vault.master_key is not None,
         }
 
+    @app.get("/walkthrough", response_class=HTMLResponse)
+    def walkthrough():
+        return (
+            (Path(__file__).parent / "static" / "walkthrough.html")
+            .read_text(encoding="utf-8")
+            .replace("__PRIVACY_GATEWAY_VERSION__", __version__)
+        )
+
+    @app.post("/v1/benchmark/demo")
+    def benchmark_demo():
+        from .benchmark import run_benchmark
+
+        return run_benchmark(detectors=engine.detectors, repeats=5)
+
     @app.get("/v1/presets")
     def presets():
         return {name: policy.model_dump(mode="json") for name, policy in PRESETS.items()}
@@ -72,6 +86,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
                 restore_key=request.restore_key,
                 metadata=request.context,
                 scope=request.scope,
+                include_policy_trace=request.include_policy_trace,
             )
         except (KeyError, ValueError, RuntimeError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

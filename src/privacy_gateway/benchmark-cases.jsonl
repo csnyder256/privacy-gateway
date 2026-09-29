@@ -1,0 +1,19 @@
+{"id":"email","text":"Contact test.person@example.test.","expected":[{"entity":"EMAIL_ADDRESS","start":8,"end":32}],"allow_terms":[]}
+{"id":"unicode-email","text":"こんにちは test.person@example.test","expected":[{"entity":"EMAIL_ADDRESS","start":16,"end":40}],"allow_terms":[]}
+{"id":"phone","text":"Call +1-202-555-0182 now.","expected":[{"entity":"PHONE_NUMBER","start":5,"end":20}],"allow_terms":[]}
+{"id":"card","text":"Use test card 4111 1111 1111 1111.","expected":[{"entity":"CREDIT_CARD","start":14,"end":33}],"allow_terms":[]}
+{"id":"invalid-card","text":"Invalid checksum: 4111 1111 1111 1112.","expected":[],"allow_terms":[]}
+{"id":"ssn","text":"Invented identifier 123-45-6789.","expected":[{"entity":"US_SSN","start":20,"end":31}],"allow_terms":[]}
+{"id":"invalid-ssn","text":"Invalid identifier 000-00-0000.","expected":[],"allow_terms":[]}
+{"id":"ipv4","text":"Connect to 192.0.2.42 now.","expected":[{"entity":"IP_ADDRESS","start":11,"end":21}],"allow_terms":[]}
+{"id":"invalid-ip","text":"Invalid host 999.999.999.999 now.","expected":[],"allow_terms":[]}
+{"id":"ipv6","text":"Connect to 2001:db8::42 now.","expected":[{"entity":"IP_ADDRESS","start":11,"end":23}],"allow_terms":[]}
+{"id":"key","text":"Fictional token sk-example00000000000000000000.","expected":[{"entity":"API_KEY","start":16,"end":46}],"allow_terms":[]}
+{"id":"date","text":"The example date is 2026-09-28.","expected":[{"entity":"DATE_TIME","start":20,"end":30}],"allow_terms":[]}
+{"id":"money","text":"Invoice: $1,284.50 today.","expected":[{"entity":"MONEY","start":9,"end":18}],"allow_terms":[]}
+{"id":"url-overlap","text":"Visit https://example.test/u/test@example.test now.","expected":[{"entity":"URL","start":6,"end":46}],"allow_terms":[]}
+{"id":"iban","text":"Test IBAN DE89 3704 0044 0532 0130 00.","expected":[{"entity":"IBAN_CODE","start":10,"end":37}],"allow_terms":[]}
+{"id":"routing","text":"Routing 021000021 is a checksum fixture.","expected":[{"entity":"US_BANK_NUMBER","start":8,"end":17}],"allow_terms":[]}
+{"id":"allowed","text":"Send to safe@example.test.","expected":[],"allow_terms":["safe@example.test"]}
+{"id":"ordinary","text":"A normal test paragraph without identifiers.","expected":[],"allow_terms":[]}
+{"id":"contextual-person","text":"An invented person named Alex Example wrote this.","expected":[{"entity":"PERSON","start":25,"end":37}],"allow_terms":[]}
