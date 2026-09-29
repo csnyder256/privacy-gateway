@@ -1,0 +1,8 @@
+{
+  "name": "privacy-gateway",
+  "package_json": [],
+  "version_patterns": {
+    "pyproject.toml": "version\\s*=\\s*\"([^\"]+)\"",
+    "src/privacy_gateway/__init__.py": "__version__\\s*=\\s*\"([^\"]+)\""
+  }
+}

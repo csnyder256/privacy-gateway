@@ -198,3 +198,10 @@ Start with the [threat model](THREAT-MODEL.md), then review
 ## License
 
 MIT © Cade Snyder. See [LICENSE](LICENSE).
+
+
+## Release downloads and deployment
+
+[Latest release](https://github.com/csnyder256/privacy-gateway/releases/latest) · [Install, deploy and upgrade](DEPLOYMENT.md)
+
+Release assets include checksums and version-specific notes.
