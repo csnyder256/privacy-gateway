@@ -17,3 +17,6 @@ data/
 .DS_Store
 playwright-report/
 test-results/
+
+# Release build output
+dist-release/

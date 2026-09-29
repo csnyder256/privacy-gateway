@@ -6,6 +6,8 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+## 0.4.1 — 2026-09-28
+
 ### Fixed
 - A rule's scope silently disabled the rule. `scopes` selects *where* a rule's
   replacement lands; the code treated it as a switch that removed the rule's entity
