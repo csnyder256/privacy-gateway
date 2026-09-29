@@ -205,3 +205,29 @@ MIT © Cade Snyder. See [LICENSE](LICENSE).
 [Latest release](https://github.com/csnyder256/privacy-gateway/releases/latest) · [Install, deploy and upgrade](DEPLOYMENT.md)
 
 Release assets include checksums and version-specific notes.
+
+## Interactive privacy lab and exact-span benchmarks
+
+Start `privacy-gateway serve`, then open `http://127.0.0.1:8787/walkthrough`.
+Choose an invented sample, adjust email action/confidence/scope and inspect the actual
+engine's `include_policy_trace` response. Allowed values, low confidence, overlap
+precedence and unclaimed scopes remain visible; unavailable required detectors block
+the transform. Trace exports omit originals, replacements, keys and capsules.
+The lab holds a temporary recovery key in page memory and deletes its server session
+after each transform. The API sees the key during operations; audit retention still
+applies. A copied capsule remains recoverable independently of server session deletion.
+
+```sh
+privacy-gateway benchmark --detector regex --repeats 20 --output ./benchmark-report
+# Optional Presidio mode requires the extra and its model; it never silently falls back:
+privacy-gateway benchmark --detector presidio --repeats 20 --output ./benchmark-presidio
+```
+
+Reports include standalone interactive HTML, JSON and per-case CSV. Exact entity type
+and UTF-8 byte span determine TP/FP/FN. Counts are separate from variable latency;
+corpus/code fingerprints, detector inventory, warmup and timing scope are recorded.
+Use `--dataset invented.jsonl` for deployment-specific fixtures with `text` and
+`expected: [{"entity": "EMAIL_ADDRESS", "start": 0, "end": 17}]` byte annotations.
+The built-in corpus includes contextual names that regex misses. It is a small
+educational corpus, not a production accuracy claim. Reports contain no source text;
+corpus hashes can still identify known inputs. Output directories must be new.

@@ -136,6 +136,7 @@ class TransformRequest(BaseModel):
     )
     context: dict[str, Any] = Field(default_factory=dict)
     scope: str = "text"
+    include_policy_trace: bool = False
 
 
 class TransformResponse(BaseModel):
@@ -145,6 +146,7 @@ class TransformResponse(BaseModel):
     policy_name: str
     policy_version: int
     detections: list[AppliedDetection]
+    policy_trace: dict[str, Any] | None = None
     capsule: str | None = None
     reason: str | None = None
 

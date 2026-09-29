@@ -123,6 +123,34 @@ def synthesize(
 
 
 @app.command()
+def benchmark(
+    output: Annotated[
+        Path, typer.Option(help="New report directory; never overwrites a prior result")
+    ],
+    detector: Annotated[
+        str, typer.Option(help="regex or presidio; explicit selection fails if unavailable")
+    ] = "regex",
+    repeats: Annotated[int, typer.Option(min=1, max=1000)] = 20,
+    dataset: Annotated[
+        Path | None, typer.Option(help="Optional invented labeled JSONL corpus")
+    ] = None,
+):
+    """Benchmark exact entity/UTF-8 spans and transform latency with reproducibility records."""
+    from .benchmark import dataset_bytes, run_benchmark, select_detectors, write_report
+
+    if output.exists():
+        raise typer.BadParameter("output directory already exists")
+    try:
+        doc = run_benchmark(
+            detectors=select_detectors(detector), repeats=repeats, raw=dataset_bytes(dataset)
+        )
+        write_report(doc, output)
+    except (ValueError, ImportError, OSError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(json.dumps({"output": str(output), "accuracy": doc["accuracy"]}, sort_keys=True))
+
+
+@app.command()
 def verify():
     """Run local fail-closed, round-trip, and altered-token probes."""
     checks = round_trip_checks()
