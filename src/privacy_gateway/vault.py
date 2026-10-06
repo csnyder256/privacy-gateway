@@ -171,28 +171,59 @@ class Vault:
             key,
             aad=f"mapping:{session_id}:{mapping_id}".encode(),
         )
+        row = (
+            mapping_id,
+            session_id,
+            detection.entity.value,
+            fingerprint,
+            encrypted,
+            replacement,
+            action.value,
+            self._now(),
+            expires_at,
+        )
         try:
-            with closing(self.connect()) as connection, connection:
-                connection.execute(
-                    "INSERT INTO mappings VALUES(?,?,?,?,?,?,?,?,?)",
-                    (
-                        mapping_id,
-                        session_id,
-                        detection.entity.value,
-                        fingerprint,
-                        encrypted,
-                        replacement,
-                        action.value,
-                        self._now(),
-                        expires_at,
-                    ),
-                )
+            self._insert_mapping(row)
+            return mapping_id
         except sqlite3.IntegrityError as exc:
             existing = self.find_mapping(session_id, detection.entity.value, detection.value)
             if existing is not None:
                 return str(existing["id"])
+            # An expired mapping still occupies its UNIQUE(session_id, entity_type,
+            # original_hmac) or UNIQUE(session_id, replacement) slot while being
+            # invisible to find_mapping. Reclaim those dead rows and retry once, so a
+            # value can be mapped again once its previous mapping has expired instead
+            # of blocking the whole transform.
+            reclaimed = self._reclaim_expired_mappings(
+                session_id, detection.entity.value, fingerprint, replacement
+            )
+            if reclaimed:
+                try:
+                    self._insert_mapping(row)
+                    return mapping_id
+                except sqlite3.IntegrityError:
+                    existing = self.find_mapping(
+                        session_id, detection.entity.value, detection.value
+                    )
+                    if existing is not None:
+                        return str(existing["id"])
             raise MappingCollision("replacement collision") from exc
-        return mapping_id
+
+    def _insert_mapping(self, row: tuple[Any, ...]) -> None:
+        with closing(self.connect()) as connection, connection:
+            connection.execute("INSERT INTO mappings VALUES(?,?,?,?,?,?,?,?,?)", row)
+
+    def _reclaim_expired_mappings(
+        self, session_id: str, entity: str, fingerprint: str, replacement: str
+    ) -> int:
+        """Delete expired mappings that would block a new one for the same value or slot."""
+        with closing(self.connect()) as connection, connection:
+            cursor = connection.execute(
+                "DELETE FROM mappings WHERE session_id=? AND expires_at<=? "
+                "AND ((entity_type=? AND original_hmac=?) OR replacement=?)",
+                (session_id, self._now(), entity, fingerprint, replacement),
+            )
+        return cursor.rowcount
 
     def record_detection(
         self,

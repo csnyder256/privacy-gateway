@@ -5,6 +5,7 @@ import pytest
 
 from privacy_gateway.crypto import decode_key, generate_key
 from privacy_gateway.engine import PrivacyEngine
+from privacy_gateway.models import TransformState
 from privacy_gateway.policies import policy_from_preset
 from privacy_gateway.vault import Vault
 
@@ -53,6 +54,30 @@ def test_expired_mapping_cannot_restore_and_is_purgeable(tmp_path):
         )
     assert gateway.restore(result.text, result.session_id) == result.text
     assert vault.purge_expired()["mappings"] == 1
+
+
+def test_expired_mapping_does_not_block_remapping_the_same_value(tmp_path):
+    """A value stays transformable after its earlier mapping expires mid-session.
+
+    The session lives for the longer of the mapping and audit retention, so a mapping
+    can expire while the session is still valid. The expired row must not keep holding
+    the unique slot and fail the whole transform closed.
+    """
+    vault = Vault(tmp_path / "db.sqlite", decode_key(generate_key()))
+    gateway = PrivacyEngine(vault)
+    source = "alice@example.com"
+    first = gateway.transform(source)
+    assert first.state == TransformState.PROTECTED
+    with vault.connect() as connection:
+        connection.execute(
+            "UPDATE mappings SET expires_at=0 WHERE session_id=?", (first.session_id,)
+        )
+
+    second = gateway.transform(source, session_id=first.session_id)
+
+    assert second.state == TransformState.PROTECTED
+    assert second.text is not None and source not in second.text
+    assert gateway.restore(second.text, second.session_id) == source
 
 
 def test_persistent_database_and_wal_do_not_contain_original_value(tmp_path):
