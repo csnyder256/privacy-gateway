@@ -6,6 +6,14 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- A value can be transformed again after its earlier mapping expired mid-session.
+  Expired mappings are invisible to lookups but still held their unique slot, so
+  re-transforming a previously seen value failed the whole request closed with
+  "unable to allocate a unique replacement". The expired row is now reclaimed and a
+  fresh replacement is allocated, matching the documented behaviour that expired
+  retention ends surrogate reuse without blocking later transforms.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
