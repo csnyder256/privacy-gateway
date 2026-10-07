@@ -602,7 +602,19 @@ export async function transform(
   } catch (error) {
     return { state: "blocked", text: null, detections: [], reverse: {}, reason: String(error) };
   }
-  const needsKey = policy.rules.some((rule) => rule.enabled && rule.action !== "keep" && rule.reversible);
+  // A reversible rule only needs a key where it actually applies. Scope narrowing
+  // decides *where* a rule's replacement lands (see scopedRules); a rule scoped
+  // elsewhere is never applied, so demanding a key for it would let scope change the
+  // transform's outcome — the same bug the scope fix removed on the Python side, where
+  // `reversible` is filtered by the current scope before the keyless check. Keep this
+  // condition identical to PrivacyEngine.transform's `reversible` list.
+  const needsKey = policy.rules.some(
+    (rule) =>
+      rule.enabled &&
+      rule.action !== "keep" &&
+      rule.reversible &&
+      (rule.scopes.includes("*") || rule.scopes.includes(scope)),
+  );
   if (needsKey && !key) {
     return { state: "blocked", text: null, detections: [], reverse: {}, reason: "reversible policy requires a key" };
   }

@@ -6,6 +6,19 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The TypeScript core required a key for a reversible rule the active scope never
+  applies, so a keyless transform blocked where the Python engine protected the value
+  unchanged. `transform` built its "needs a key" guard from every enabled reversible
+  rule instead of the rules that claim the current scope, which made `scopes` an
+  outcome switch again — the same defect the 0.4.1 scope fix removed on the Python
+  side, where the `reversible` list is filtered by the scope first. The guard is now
+  scope-aware and matches `PrivacyEngine.transform` exactly.
+  `conformance/core-v1.json` gained a `scopes` fixture
+  (`scoped-out-reversible-rule-does-not-require-a-key`) that both runtimes must pass,
+  and the Python suite now reads the `scopes` vectors from that file instead of
+  mirroring them by hand, so a single table binds both runtimes.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed

@@ -307,7 +307,7 @@ test("shared scope fixtures: a rule's scope narrows where it applies, not whethe
         entity: "EMAIL_ADDRESS",
         action: fixture.action,
         enabled: true,
-        reversible: false,
+        reversible: fixture.reversible ?? false,
         minimumConfidencePpm: 500_000,
         priority: 0,
         locale: "en-US",
