@@ -14,8 +14,12 @@ same-scope case (`scopes=["text"]` in a `text` transform) must keep working
 exactly as before, so each test also pins the behavior that already worked.
 """
 
+import json
 from pathlib import Path
 
+from conftest import repo_path
+
+from privacy_gateway.detectors import RegexDetector
 from privacy_gateway.engine import PrivacyEngine
 from privacy_gateway.models import Action, EntityType, Policy, PolicyRule
 from privacy_gateway.vault import Vault
@@ -141,3 +145,80 @@ def test_scope_still_selects_the_rule_when_the_value_is_also_allowed(tmp_path):
     result = gateway.transform("safe@example.com", policy=policy, scope="json:/allowed")
     assert result.text == "safe@example.com"
     assert result.detections == []
+
+
+def test_keyless_scoped_out_reversible_rule_does_not_block(tmp_path):
+    """A reversible rule that does not claim the scope is never applied, so it needs no key.
+
+    Scope narrowing decides where a replacement lands, not whether the transform may
+    run. Requiring a key for a rule that cannot apply turned the scope into an
+    outcome switch, exactly what the scope fix exists to prevent.
+    """
+    policy = Policy(
+        name="reversible-elsewhere",
+        rules=[
+            PolicyRule(
+                entity=EntityType.EMAIL_ADDRESS,
+                action=Action.TOKENIZE,
+                reversible=True,
+                scopes=["json:/other"],
+            )
+        ],
+    )
+    result = engine(tmp_path).transform(
+        "Contact a@example.com today.", policy=policy, scope="json:/allowed"
+    )
+    assert result.state.value == "protected"
+    assert result.text == "Contact a@example.com today."
+    assert result.detections == []
+
+
+def test_keyless_reversible_rule_that_claims_the_scope_still_blocks(tmp_path):
+    """The keyless guard still fires where the reversible rule actually applies."""
+    policy = Policy(
+        name="reversible-here",
+        rules=[
+            PolicyRule(
+                entity=EntityType.EMAIL_ADDRESS,
+                action=Action.TOKENIZE,
+                reversible=True,
+                scopes=["text"],
+            )
+        ],
+    )
+    result = engine(tmp_path).transform("Contact a@example.com today.", policy=policy, scope="text")
+    assert result.state.value == "blocked"
+    assert result.text is None
+    assert result.reason == "reversible policy requires a server master key or client restore key"
+
+
+def test_shared_scope_fixtures_match_the_engine(tmp_path):
+    """The `scopes` vectors in conformance/core-v1.json, held to the Python engine.
+
+    `@privacy-gateway/core` already consumes these; the Python engine mirrored them by
+    hand. Reading the same file makes one vector table bind both runtimes, so a scope
+    or key-requirement divergence fails in whichever runtime drifted.
+    """
+    fixtures = json.loads(repo_path("conformance/core-v1.json").read_text(encoding="utf-8"))[
+        "scopes"
+    ]
+    gateway = PrivacyEngine(Vault(tmp_path / "scope-fixtures.db"), detectors=[RegexDetector()])
+    for fixture in fixtures:
+        policy = Policy(
+            name=fixture["name"],
+            rules=[
+                PolicyRule(
+                    entity=EntityType.EMAIL_ADDRESS,
+                    action=Action(fixture["action"]),
+                    reversible=fixture.get("reversible", False),
+                    scopes=list(fixture["scopes"]),
+                    required_detectors=list(fixture["required_detectors"]),
+                )
+            ],
+            allow_terms=list(fixture["allow_terms"]),
+        )
+        result = gateway.transform(fixture["text"], policy=policy, scope=fixture["scope"])
+        assert result.state.value == fixture["expected_state"], fixture["name"]
+        assert result.text == fixture["expected_text"], fixture["name"]
+        if "expected_reason" in fixture:
+            assert result.reason == fixture["expected_reason"], fixture["name"]

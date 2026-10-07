@@ -147,6 +147,18 @@
       "allow_terms": ["safe@example.com"],
       "expected_state": "protected",
       "expected_text": "safe@example.com"
+    },
+    {
+      "name": "scoped-out-reversible-rule-does-not-require-a-key",
+      "scope": "json:/allowed",
+      "text": "Contact a@example.com today.",
+      "action": "tokenize",
+      "reversible": true,
+      "scopes": ["json:/other"],
+      "required_detectors": [],
+      "allow_terms": [],
+      "expected_state": "protected",
+      "expected_text": "Contact a@example.com today."
     }
   ]
 }
