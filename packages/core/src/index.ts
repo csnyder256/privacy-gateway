@@ -466,12 +466,18 @@ async function digestBytes(entity: EntityType, value: string, key?: Uint8Array):
 const hex = (value: Uint8Array): string =>
   [...value].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 
-function decimalDigits(seed: bigint, length: number): string {
+// The same rule as `_digits` in the Python engine: a deterministic decimal stream built by
+// repeatedly hashing the previous value. Both runtimes must produce identical synthetic
+// values for the same key and input, so the digit stream is SHA-256, not a private PRNG.
+async function decimalDigits(seed: bigint, length: number): Promise<string> {
   let output = "";
   let value = seed;
   while (output.length < length) {
     output += value.toString().padStart(20, "0");
-    value = (value * 6_364_136_223_846_793_005n + 1_442_695_040_888_963_407n) & ((1n << 64n) - 1n);
+    const digest = new Uint8Array(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value.toString())),
+    );
+    value = BigInt(`0x${hex(digest).slice(0, 16)}`);
   }
   return output.slice(0, length);
 }
@@ -489,9 +495,12 @@ function luhnCheckDigit(prefix: string): string {
   throw new Error("a Luhn check digit must exist");
 }
 
-function syntheticIban(country: "DE" | "ES" | "FR" | "GB", seed: bigint): string {
+async function syntheticIban(country: "DE" | "ES" | "FR" | "GB", seed: bigint): Promise<string> {
   const lengths = { DE: 18, ES: 20, FR: 23, GB: 18 } as const;
-  const bban = country === "GB" ? `PGAT${decimalDigits(seed, 14)}` : decimalDigits(seed, lengths[country]);
+  const bban =
+    country === "GB"
+      ? `PGAT${await decimalDigits(seed, 14)}`
+      : await decimalDigits(seed, lengths[country]);
   const provisional = `${bban}${country}00`;
   const numeric = [...provisional]
     .map((char) => /[A-Z]/u.test(char) ? String(char.charCodeAt(0) - 55) : char)
@@ -501,8 +510,8 @@ function syntheticIban(country: "DE" | "ES" | "FR" | "GB", seed: bigint): string
   return `${country}${String(98n - remainder).padStart(2, "0")}${bban}`;
 }
 
-function routingNumber(seed: bigint): string {
-  const prefix = `01${decimalDigits(seed, 6)}`;
+async function routingNumber(seed: bigint): Promise<string> {
+  const prefix = `01${await decimalDigits(seed, 6)}`;
   for (const candidate of "0123456789") {
     const digits = [...`${prefix}${candidate}`].map(Number);
     const total = digits.reduce((sum, digit, index) => sum + [3, 7, 1][index % 3]! * digit, 0);
@@ -532,7 +541,7 @@ async function synthetic(item: Detection, key?: Uint8Array): Promise<string> {
   }
   if (item.entity === "MONEY") return `$${(10n + (seed % 9_990n)).toLocaleString("en-US")}.00`;
   if (item.entity === "CREDIT_CARD") {
-    const prefix = `4${decimalDigits(seed, 14)}`;
+    const prefix = `4${await decimalDigits(seed, 14)}`;
     return prefix + luhnCheckDigit(prefix);
   }
   if (item.entity === "US_SSN") {
@@ -546,7 +555,12 @@ async function synthetic(item: Detection, key?: Uint8Array): Promise<string> {
     return item.value.includes(":") ? `2001:db8::${(1n + (seed % 65_534n)).toString(16)}` : `192.0.2.${1n + (seed % 254n)}`;
   }
   if (item.entity === "API_KEY") {
-    const value = base32(digest).slice(0, 24);
+    // Same rule as the Python engine: base32(SHA-256(decimal seed))[:24], not the raw
+    // digest, so both runtimes agree on the surrogate for the same key and input.
+    const tokenBytes = new Uint8Array(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(seed.toString())),
+    );
+    const value = base32(tokenBytes).slice(0, 24);
     if (item.value.startsWith("AKIA")) return `AKIA${value.slice(0, 16)}`;
     if (/^gh[pousr]_/u.test(item.value)) return `${item.value.slice(0, 4)}${value}`;
     return `sk-pg_${value}`;
@@ -555,12 +569,12 @@ async function synthetic(item: Detection, key?: Uint8Array): Promise<string> {
   if (item.entity === "IBAN_CODE") {
     const candidate = item.value.replaceAll(" ", "").slice(0, 2).toUpperCase();
     const country = (["DE", "ES", "FR", "GB"] as const).find((value) => value === candidate) ?? "GB";
-    return syntheticIban(country, seed);
+    return await syntheticIban(country, seed);
   }
-  if (item.entity === "US_BANK_NUMBER") return routingNumber(seed);
-  if (item.entity === "PASSPORT") return `P${decimalDigits(seed, 8)}`;
-  if (item.entity === "DRIVER_LICENSE") return `D${decimalDigits(seed, 8)}`;
-  if (item.entity === "MEDICAL_LICENSE") return `M${decimalDigits(seed, 9)}`;
+  if (item.entity === "US_BANK_NUMBER") return await routingNumber(seed);
+  if (item.entity === "PASSPORT") return `P${await decimalDigits(seed, 8)}`;
+  if (item.entity === "DRIVER_LICENSE") return `D${await decimalDigits(seed, 8)}`;
+  if (item.entity === "MEDICAL_LICENSE") return `M${await decimalDigits(seed, 9)}`;
   return `SYNTHETIC_${item.entity}_${hex(digest).slice(0, 10).toUpperCase()}`;
 }
 
