@@ -48,6 +48,22 @@
       "text": "Budget $1,284 or €1.284 or 1,234,567 USD; fees $0.99 or 12,5 GBP.",
       "key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       "expected": "Budget $~10^3 or €~10^3 or ~10^6; fees $~10^0 or ~10^1."
+    },
+    {
+      "name": "deterministic-synthetic-api-key",
+      "entity": "API_KEY",
+      "action": "synthetic",
+      "text": "sk-example000000000000000000",
+      "key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "sk-pg_T25FTW4OI76QHPBYS5GFVF37"
+    },
+    {
+      "name": "deterministic-synthetic-french-iban",
+      "entity": "IBAN_CODE",
+      "action": "synthetic",
+      "text": "FR7630006000011234567890189",
+      "key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "FR3213965794737745184131175"
     }
   ],
   "detection": [

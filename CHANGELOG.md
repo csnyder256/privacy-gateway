@@ -6,6 +6,18 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- `@privacy-gateway/core` generated different synthetic values than the Python engine for
+  the same key and input. The TypeScript core built its decimal digit stream — the basis of
+  synthetic cards, IBANs, routing numbers and license/passport identifiers — with a private
+  64-bit PRNG, and derived API-key tokens from the raw digest instead of the decimal seed.
+  The two runtimes agreed only by accident for streams of 20 digits or fewer, so a French
+  IBAN (23 digits) and every API-key family produced a different surrogate in the
+  browser/Node core than on the server, breaking the shared-operator determinism the
+  conformance corpus asserts. The TypeScript core now uses the same SHA-256 digit stream as
+  Python's `_digits`, and `conformance/core-v1.json` gained `synthetic` fixtures for an API
+  key and a French IBAN that both runtimes must pass.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
