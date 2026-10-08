@@ -6,6 +6,20 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The PostgreSQL vault could not re-map a value whose earlier mapping expired mid-session.
+  `store_mapping` relies on `UNIQUE(session_id, entity_type, original_hmac)` and
+  `UNIQUE(session_id, replacement)`, and an expired mapping still holds those slots while
+  being invisible to `find_mapping`, which filters on `expires_at > now`. Re-transforming a
+  previously seen value therefore raised `MappingCollision` on every allocation retry and
+  failed the whole request closed with `unable to allocate a unique replacement`, even
+  though the session was still valid. The backend now reclaims the expired rows that would
+  block the new mapping and retries once, matching the default SQLite vault. Active mappings
+  and the live collision guard are unchanged; no public API or on-disk schema changed.
+- The PostgreSQL parity suite (`tests/test_pg_vault.py`) skips unless
+  `PRIVACY_GATEWAY_TEST_PG_DSN` points at a live database, so it never ran in CI. A
+  `postgres-parity` job now starts a throwaway PostgreSQL 16 service and runs it.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed

@@ -17,7 +17,7 @@ import pytest
 from privacy_gateway.crypto import decode_key, generate_key
 from privacy_gateway.engine import PrivacyEngine
 from privacy_gateway.models import Detection, EntityType
-from privacy_gateway.vault import open_vault
+from privacy_gateway.vault import MappingCollision, open_vault
 
 DSN = os.getenv("PRIVACY_GATEWAY_TEST_PG_DSN")
 pytest.importorskip("psycopg", reason="psycopg not installed")
@@ -77,6 +77,98 @@ def test_repeated_value_reuses_one_mapping():
     )
     second = vault.find_mapping(session_id, "EMAIL_ADDRESS", "a@example.com")
     assert second is not None and str(second["id"]) == first
+    vault.delete_session(session_id)
+
+
+def _email_detection(value: str) -> Detection:
+    return Detection(
+        entity=EntityType.EMAIL_ADDRESS,
+        start=0,
+        end=len(value),
+        char_start=0,
+        char_end=len(value),
+        confidence_ppm=990_000,
+        detector="regex-v1",
+        value=value,
+    )
+
+
+def engine_session(vault):
+    engine = PrivacyEngine(vault)
+    return engine.create_session(preset="balanced")
+
+
+def test_expired_mapping_does_not_block_remapping_the_same_value():
+    """A value stays transformable after its earlier mapping expires mid-session.
+
+    The session lives for the longer of the mapping and audit retention, so a mapping
+    can expire while the session is still valid. The expired row must not keep holding
+    the unique slot and fail the whole transform closed. The SQLite vault reclaims it
+    (see ``tests/test_vault.py``); this pins the same behavior on PostgreSQL, which the
+    README and the promised-scope matrix describe as behaviorally identical.
+    """
+    vault = _vault()
+    engine = PrivacyEngine(vault)
+    source = "alice@example.com"
+    first = engine.transform(source)
+    assert first.state.value == "protected"
+    with vault._cursor() as cursor:
+        cursor.execute("UPDATE mappings SET expires_at=1 WHERE session_id=%s", (first.session_id,))
+
+    second = engine.transform(source, session_id=first.session_id)
+
+    assert second.state.value == "protected"
+    assert second.text is not None and source not in second.text
+    assert engine.restore(second.text, second.session_id) == source
+    vault.delete_session(first.session_id)
+
+
+def test_expired_replacement_slot_is_reclaimed_for_a_new_value():
+    """The expired row also stops reserving its unique replacement for other values."""
+    vault = _vault()
+    session_id, policy = engine_session(vault)
+    action = policy.rule_for(EntityType.EMAIL_ADDRESS).action
+    vault.store_mapping(
+        session_id,
+        _email_detection("a@example.com"),
+        "COLLIDE",
+        action,
+        expires_at=vault._now() + 3600,
+    )
+    with vault._cursor() as cursor:
+        cursor.execute("UPDATE mappings SET expires_at=1 WHERE session_id=%s", (session_id,))
+
+    reused = vault.store_mapping(
+        session_id,
+        _email_detection("b@example.com"),
+        "COLLIDE",
+        action,
+        expires_at=vault._now() + 3600,
+    )
+    assert reused
+    vault.delete_session(session_id)
+
+
+def test_live_replacement_collision_still_blocks_a_different_value():
+    """Reclaiming expired rows must not weaken the live collision guard."""
+    vault = _vault()
+    session_id, policy = engine_session(vault)
+    action = policy.rule_for(EntityType.EMAIL_ADDRESS).action
+    vault.store_mapping(
+        session_id,
+        _email_detection("a@example.com"),
+        "COLLIDE",
+        action,
+        expires_at=vault._now() + 3600,
+    )
+    with pytest.raises(MappingCollision):
+        vault.store_mapping(
+            session_id,
+            _email_detection("b@example.com"),
+            "COLLIDE",
+            action,
+            expires_at=vault._now() + 3600,
+        )
     vault.delete_session(session_id)
 
 
