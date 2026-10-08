@@ -46,6 +46,38 @@ jobs:
           pip install -U 'mcp>=2,<3'
           pytest tests/test_mcp_server.py
 
+  # The PostgreSQL vault is an alternate backend of the same storage contract as the
+  # default SQLite vault. Its parity tests skip unless PRIVACY_GATEWAY_TEST_PG_DSN
+  # points at a reachable database, so without this job they never run anywhere
+  # automated. One interpreter is enough to exercise the SQL dialect; the python
+  # matrix above already covers version-specific behavior.
+  postgres-parity:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          # Loopback-only throwaway service; trust auth keeps a credential literal
+          # out of the workflow.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PRIVACY_GATEWAY_TEST_PG_DSN: postgresql://postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e '.[dev,postgres]'
+      - run: pytest tests/test_pg_vault.py
+
   secret-scan:
     runs-on: ubuntu-latest
     steps:
