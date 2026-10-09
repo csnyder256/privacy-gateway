@@ -137,3 +137,27 @@ def test_shared_cross_runtime_scope_fixtures(tmp_path):
         assert result.text == fixture["expected_text"], fixture["name"]
         if "expected_reason" in fixture:
             assert result.reason == fixture["expected_reason"], fixture["name"]
+
+
+def test_recognizers_are_ascii_only_like_the_typescript_core():
+    """The shared recognizer grammar is ASCII; Unicode digits and case folds are not.
+
+    Python's default ``re`` mode is Unicode, so ``\\d``, ``\\w`` and ``re.IGNORECASE``
+    classified values the TypeScript core (and ``docs/normative-contract.md``'s
+    "built-in ASCII/checksum recognizers") never matches. Every recognizer class now
+    spells its ASCII set explicitly, so a server transform and a browser transform
+    resolve the same candidates for the same policy and input.
+    """
+    policy = policy_from_preset("strict")
+    assert resolve_detections("$١٢٣٤ ١٢٣٤٥٦٧٨٩ １２３４５６７８９", policy, [RegexDetector()]) == []
+    assert (
+        resolve_detections(
+            "ſ@example.com \u212a@example.com İ@example.com", policy, [RegexDetector()]
+        )
+        == []
+    )
+    ascii_digits = resolve_detections("$1234 and 123456789", policy, [RegexDetector()])
+    assert [(item.entity.value, item.value) for item in ascii_digits] == [
+        ("MONEY", "$1234"),
+        ("US_SSN", "123456789"),
+    ]

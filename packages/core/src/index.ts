@@ -240,8 +240,13 @@ export function validatePolicy(policy: Policy): void {
 }
 
 const patterns: Partial<Record<EntityType, RegExp>> = {
+  // The shared recognizer grammar is ASCII (docs/normative-contract.md: "built-in
+  // ASCII/checksum recognizers"), and the Python engine spells every class in ASCII to
+  // match. The `/i` flag is therefore kept off the letter classes: with the `u` flag it
+  // case-folds non-ASCII letters (`ſ`, `K` Kelvin sign) onto `[A-Z]`, which the ASCII
+  // grammar does not include. `[A-Za-z]` keeps both cases explicit instead.
   EMAIL_ADDRESS:
-    /(?<![\w.!#$%&'*+=?^`{|}~-])[A-Z0-9.!#$%&'*+=?^_`{|}~-]{1,64}@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+(?![\w-])/giu,
+    /(?<![\w.!#$%&'*+=?^`{|}~-])[A-Za-z0-9.!#$%&'*+=?^_`{|}~-]{1,64}@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+(?![\w-])/gu,
   PHONE_NUMBER: /(?<!\d)(?:\+?\d{1,3}[ .-]?)?(?:\(\d{2,4}\)|\d{2,4})[ .-]\d{3,4}[ .-]\d{4}(?!\d)/gu,
   US_SSN: /(?<!\d)(?!000|666|9\d\d)\d{3}([- ]?)(?!00)\d{2}\1(?!0000)\d{4}(?!\d)/gu,
   CREDIT_CARD: /(?<!\d)(?:\d[ -]*?){13,19}(?!\d)/gu,
@@ -249,10 +254,10 @@ const patterns: Partial<Record<EntityType, RegExp>> = {
     /(?<![0-9A-Fa-f:.])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![0-9A-Fa-f:.])|(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])/gu,
   API_KEY: /(?<![A-Za-z0-9])(?:sk-[A-Za-z0-9_-]{16,200}|gh[pousr]_[A-Za-z0-9]{20,255}|AKIA[A-Z0-9]{16})(?![A-Za-z0-9])/gu,
   DATE_TIME: /(?<!\d)(?:20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]20\d{2})(?!\d)/gu,
-  MONEY: /(?<!\w)(?:[$€£]\s?\d[\d ,.]*\d|[$€£]\s?\d|\d[\d ,.]*\d\s?(?:USD|EUR|GBP)|\d\s?(?:USD|EUR|GBP))(?!\w)/giu,
-  URL: /(?<!\w)https?:\/\/[^\s<>"']+/giu,
+  MONEY: /(?<!\w)(?:[$€£]\s?\d[\d ,.]*\d|[$€£]\s?\d|\d[\d ,.]*\d\s?(?:[Uu][Ss][Dd]|[Ee][Uu][Rr]|[Gg][Bb][Pp])|\d\s?(?:[Uu][Ss][Dd]|[Ee][Uu][Rr]|[Gg][Bb][Pp]))(?!\w)/gu,
+  URL: /(?<!\w)[Hh][Tt][Tt][Pp][Ss]?:\/\/[^\s<>"']+/gu,
   IBAN_CODE:
-    /(?<![A-Z0-9])(?:DE(?: ?[A-Z0-9]){20}|ES(?: ?[A-Z0-9]){22}|FR(?: ?[A-Z0-9]){25}|GB(?: ?[A-Z0-9]){20})(?![A-Z0-9])/giu,
+    /(?<![A-Za-z0-9])(?:[Dd][Ee](?: ?[A-Za-z0-9]){20}|[Ee][Ss](?: ?[A-Za-z0-9]){22}|[Ff][Rr](?: ?[A-Za-z0-9]){25}|[Gg][Bb](?: ?[A-Za-z0-9]){20})(?![A-Za-z0-9])/gu,
   US_BANK_NUMBER: /(?<!\d)\d{3}(?:[ -]?\d{3}){2}(?!\d)/gu,
 };
 

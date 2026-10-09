@@ -35,7 +35,11 @@ jobs:
       # requirement would otherwise leave the previous step's version in place.
       - name: MCP server on the oldest supported mcp (1.14)
         run: |
-          pip install 'mcp==1.14.0'
+          # mcp 1.14 imports the private symbol pydantic._internal._typing_extra.
+          # eval_type_backport, which pydantic 2.14 removed; pin the last line that still
+          # exposes it so this cell exercises mcp 1.14 instead of failing at import. The
+          # two newer cells below are unpinned and pick up their own pydantic.
+          pip install 'mcp==1.14.0' 'pydantic<2.14'
           pytest tests/test_mcp_server.py
       - name: MCP server on mcp 1.x
         run: |
