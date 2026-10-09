@@ -100,6 +100,35 @@
       "expected": [
         {"entity": "EMAIL_ADDRESS", "start": 8, "end": 23, "value": "zoe@example.com"}
       ]
+    },
+    {
+      "name": "unicode-digits-are-not-classified",
+      "preset": "strict",
+      "text": "$\u0661\u0662\u0663\u0664 \u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669 \uff11\uff12\uff13\uff14\uff15\uff16\uff17\uff18\uff19",
+      "expected": []
+    },
+    {
+      "name": "ascii-digits-are-classified",
+      "preset": "strict",
+      "text": "$1234 and 123456789",
+      "expected": [
+        {"entity": "MONEY", "start": 0, "end": 5, "value": "$1234"},
+        {"entity": "US_SSN", "start": 10, "end": 19, "value": "123456789"}
+      ]
+    },
+    {
+      "name": "unicode-case-folding-is-not-ascii",
+      "preset": "strict",
+      "text": "\u017f@example.com \u212a@example.com \u0130@example.com",
+      "expected": []
+    },
+    {
+      "name": "ascii-case-variation-is-classified",
+      "preset": "strict",
+      "text": "ZOE@EXAMPLE.COM",
+      "expected": [
+        {"entity": "EMAIL_ADDRESS", "start": 0, "end": 15, "value": "ZOE@EXAMPLE.COM"}
+      ]
     }
   ],
   "scopes": [

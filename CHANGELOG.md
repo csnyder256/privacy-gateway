@@ -6,6 +6,19 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The Python recognizers classified values the TypeScript core (and the documented
+  ASCII recognizer grammar) leaves alone. Python's `re` runs in Unicode mode by default:
+  `\d` matched Arabic-Indic and fullwidth digits, `\w` matched non-ASCII word characters,
+  and `re.IGNORECASE` case-folded `İ`, `ı`, `ſ`, and the Kelvin sign onto `[A-Z]`. A server
+  transform therefore reported `US_SSN`, `CREDIT_CARD`, `US_BANK_NUMBER`, `PHONE_NUMBER`
+  and `MONEY` for digit surfaces such as `$١٢٣٤` or `１２３４５６７８９`, and an
+  `EMAIL_ADDRESS` for `İ@example.com`, while the same policy in `@privacy-gateway/core`
+  reported nothing — the two runtimes disagreed on the same input. Every recognizer class
+  is now spelled out in ASCII on both sides, so a policy resolves the same candidates
+  wherever it runs; the shared `conformance/core-v1.json` corpus gained `detection`
+  fixtures that pin the ASCII digit and case boundaries for both runtimes.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed

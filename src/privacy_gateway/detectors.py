@@ -46,45 +46,52 @@ class Detector(Protocol):
 
 class RegexDetector:
     name = "regex-v1"
+    # The recognizers are ASCII by contract ("built-in ASCII/checksum recognizers",
+    # docs/normative-contract.md) and the TypeScript core they must agree with compiles
+    # its classes without Unicode case folding. Python's default `re` mode is Unicode:
+    # `\d` matches Arabic-Indic and fullwidth digits, `\w` matches non-ASCII word
+    # characters, and `re.IGNORECASE` case-folds `İ`/`ı`/`ſ`/Kelvin onto `[A-Z]`. None of
+    # that is part of the shared grammar, and it made the server classify values the
+    # browser/Node core leaves alone. Every class below is spelled out in ASCII so the two
+    # runtimes resolve the same candidates; `\s` is intentionally left as-is because the
+    # core's `\s` is Unicode-aware too.
     PATTERNS: ClassVar[dict[EntityType, re.Pattern[str]]] = {
         EntityType.EMAIL_ADDRESS: re.compile(
-            r"(?<![\w.!#$%&'*+=?^`{|}~-])[A-Z0-9.!#$%&'*+=?^_`{|}~-]{1,64}"
-            r"@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\."
-            r"[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+(?![\w-])",
-            re.IGNORECASE,
+            r"(?<![A-Za-z0-9_.!#$%&'*+=?^`{|}~-])[A-Za-z0-9.!#$%&'*+=?^_`{|}~-]{1,64}"
+            r"@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\."
+            r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+(?![A-Za-z0-9_-])"
         ),
         EntityType.PHONE_NUMBER: re.compile(
-            r"(?<!\d)(?:\+?\d{1,3}[ .-]?)?(?:\(\d{2,4}\)|\d{2,4})"
-            r"[ .-]\d{3,4}[ .-]\d{4}(?!\d)"
+            r"(?<![0-9])(?:\+?[0-9]{1,3}[ .-]?)?(?:\([0-9]{2,4}\)|[0-9]{2,4})"
+            r"[ .-][0-9]{3,4}[ .-][0-9]{4}(?![0-9])"
         ),
         EntityType.US_SSN: re.compile(
-            r"(?<!\d)(?!000|666|9\d\d)\d{3}([- ]?)(?!00)\d{2}\1(?!0000)\d{4}(?!\d)"
+            r"(?<![0-9])(?!000|666|9[0-9][0-9])[0-9]{3}([- ]?)(?!00)[0-9]{2}\1(?!0000)[0-9]{4}(?![0-9])"
         ),
-        EntityType.CREDIT_CARD: re.compile(r"(?<!\d)(?:\d[ -]*?){13,19}(?!\d)"),
+        EntityType.CREDIT_CARD: re.compile(r"(?<![0-9])(?:[0-9][ -]*?){13,19}(?![0-9])"),
         EntityType.IP_ADDRESS: re.compile(
             r"(?<![0-9A-Fa-f:.])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![0-9A-Fa-f:.])"
-            r"|(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])"
+            r"|(?<![0-9.])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9.])"
         ),
         EntityType.API_KEY: re.compile(
             r"(?<![A-Za-z0-9])(?:sk-[A-Za-z0-9_-]{16,200}|"
             r"gh[pousr]_[A-Za-z0-9]{20,255}|AKIA[A-Z0-9]{16})(?![A-Za-z0-9])"
         ),
         EntityType.DATE_TIME: re.compile(
-            r"(?<!\d)(?:20\d{2}[-/]\d{1,2}[-/]\d{1,2}|"
-            r"\d{1,2}[-/.]\d{1,2}[-/.]20\d{2})(?!\d)"
+            r"(?<![0-9])(?:20[0-9]{2}[-/][0-9]{1,2}[-/][0-9]{1,2}|"
+            r"[0-9]{1,2}[-/.][0-9]{1,2}[-/.]20[0-9]{2})(?![0-9])"
         ),
         EntityType.MONEY: re.compile(
-            r"(?<!\w)(?:[$€£]\s?\d[\d ,.]*\d|[$€£]\s?\d|"
-            r"\d[\d ,.]*\d\s?(?:USD|EUR|GBP)|\d\s?(?:USD|EUR|GBP))(?!\w)",
-            re.IGNORECASE,
+            r"(?<![A-Za-z0-9_])(?:[$€£]\s?[0-9][0-9 ,.]*[0-9]|[$€£]\s?[0-9]|"
+            r"[0-9][0-9 ,.]*[0-9]\s?(?:[Uu][Ss][Dd]|[Ee][Uu][Rr]|[Gg][Bb][Pp])|"
+            r"[0-9]\s?(?:[Uu][Ss][Dd]|[Ee][Uu][Rr]|[Gg][Bb][Pp]))(?![A-Za-z0-9_])"
         ),
-        EntityType.URL: re.compile(r"(?<!\w)https?://[^\s<>\"']+", re.IGNORECASE),
+        EntityType.URL: re.compile(r"(?<![A-Za-z0-9_])[Hh][Tt][Tt][Pp][Ss]?://[^\s<>\"']+"),
         EntityType.IBAN_CODE: re.compile(
-            r"(?<![A-Z0-9])(?:DE(?: ?[A-Z0-9]){20}|ES(?: ?[A-Z0-9]){22}|"
-            r"FR(?: ?[A-Z0-9]){25}|GB(?: ?[A-Z0-9]){20})(?![A-Z0-9])",
-            re.IGNORECASE,
+            r"(?<![A-Za-z0-9])(?:[Dd][Ee](?: ?[A-Za-z0-9]){20}|[Ee][Ss](?: ?[A-Za-z0-9]){22}|"
+            r"[Ff][Rr](?: ?[A-Za-z0-9]){25}|[Gg][Bb](?: ?[A-Za-z0-9]){20})(?![A-Za-z0-9])"
         ),
-        EntityType.US_BANK_NUMBER: re.compile(r"(?<!\d)\d{3}(?:[ -]?\d{3}){2}(?!\d)"),
+        EntityType.US_BANK_NUMBER: re.compile(r"(?<![0-9])[0-9]{3}(?:[ -]?[0-9]{3}){2}(?![0-9])"),
     }
 
     @staticmethod
