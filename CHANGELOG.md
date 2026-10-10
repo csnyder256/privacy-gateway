@@ -15,6 +15,10 @@ minor version and fixes raise the patch version.
   runtimes, `conformance/core-v1.json` gained two `precedence` fixtures that Python and
   `@privacy-gateway/core` must both pass, and a regex match on the same value is still
   retired by the allow term.
+- CI: the `mcp==1.14.0` compatibility cell now pins `pydantic<2.14`. mcp 1.14 imports the
+  private symbol `pydantic._internal._typing_extra.eval_type_backport`, which pydantic 2.14
+  removed, so the cell failed at import once 2.14 shipped; the two newer mcp cells stay
+  unpinned and resolve their own pydantic.
 
 ## 0.4.1 — 2026-09-28
 
