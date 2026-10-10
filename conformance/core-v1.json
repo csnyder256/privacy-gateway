@@ -148,5 +148,29 @@
       "expected_state": "protected",
       "expected_text": "safe@example.com"
     }
+  ],
+  "precedence": [
+    {
+      "name": "deny-list-outranks-an-allow-term",
+      "entity": "PERSON",
+      "action": "redact",
+      "text": "Project Heron is confidential.",
+      "allow_terms": ["Project Heron"],
+      "deny_terms": {"Project Heron": "PERSON"},
+      "expected_state": "protected",
+      "expected_text": "[REDACTED:PERSON] is confidential.",
+      "expected_detectors": ["deny-list"]
+    },
+    {
+      "name": "allow-term-still-retires-a-regex-match",
+      "entity": "EMAIL_ADDRESS",
+      "action": "redact",
+      "text": "Write to safe@example.com today.",
+      "allow_terms": ["safe@example.com"],
+      "deny_terms": {},
+      "expected_state": "protected",
+      "expected_text": "Write to safe@example.com today.",
+      "expected_detectors": []
+    }
   ]
 }

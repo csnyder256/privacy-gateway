@@ -352,3 +352,34 @@ test("an out-of-scope URL cannot suppress an in-scope email", async () => {
     assert.equal((await transform(text, policy)).text, "[REDACTED:URL]");
   }
 });
+
+// Mirrored in tests/test_detectors.py; both runtimes consume these fixtures.
+test("shared precedence fixtures: a deny-listed value outranks an allow term", async () => {
+  const fixtures = JSON.parse(await readFile(new URL("../../../conformance/core-v1.json", import.meta.url), "utf8"));
+  for (const fixture of fixtures.precedence) {
+    const policy = {
+      name: fixture.name,
+      version: 1,
+      rules: [{
+        entity: fixture.entity,
+        action: fixture.action,
+        enabled: true,
+        reversible: false,
+        minimumConfidencePpm: 500_000,
+        priority: 0,
+        locale: "en-US",
+        scopes: ["*"],
+        requiredDetectors: [],
+      }],
+      allowTerms: [...fixture.allow_terms],
+      denyTerms: { ...fixture.deny_terms },
+      failClosed: true,
+      mappingRetentionSeconds: 86_400,
+      auditRetentionSeconds: 2_592_000,
+    };
+    const result = await transform(fixture.text, policy);
+    assert.equal(result.state, fixture.expected_state, fixture.name);
+    assert.equal(result.text, fixture.expected_text, fixture.name);
+    assert.deepEqual(result.detections.map((item) => item.detector), fixture.expected_detectors, fixture.name);
+  }
+});

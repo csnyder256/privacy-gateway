@@ -390,7 +390,14 @@ export function detect(text: string, policy: Policy, scope = "text"): Detection[
   const allow = new Set(policy.allowTerms.map((value) => value.toLocaleLowerCase()));
   const eligible = candidates.filter((item) => {
     const rule = active.get(item.entity)!;
-    return item.confidencePpm >= rule.minimumConfidencePpm && !allow.has(item.value.toLocaleLowerCase());
+    if (item.confidencePpm < rule.minimumConfidencePpm) return false;
+    // An explicit deny-list match outranks an allow term: the frozen precedence
+    // removes an allow-listed candidate *unless deny-listed*, so a value the
+    // operator declared sensitive cannot be retired by the same term also being
+    // allow-listed. A regex match on the same value is still retired by the
+    // allow term. Mirrors Python's resolve_detections.
+    if (item.detector === "deny-list") return true;
+    return !allow.has(item.value.toLocaleLowerCase());
   });
   eligible.sort((left, right) => {
     const leftRule = active.get(left.entity)!;
