@@ -311,7 +311,14 @@ def resolve_detections(
             decision(item, "inactive_rule")
         elif item.confidence_ppm < active_rules[item.entity].minimum_confidence_ppm:
             decision(item, "below_confidence")
-        elif item.value.casefold() in allow:
+        elif item.detector != "deny-list" and item.value.casefold() in allow:
+            # An explicit deny-list match outranks an allow term. The frozen
+            # precedence removes an allow-listed candidate *unless deny-listed*,
+            # so a value the operator declared sensitive cannot be retired by the
+            # same term also being allow-listed; it would otherwise cross the
+            # boundary unchanged. A regex match on the same value is still
+            # retired by the allow term, and deny-list overlap precedence is
+            # unchanged.
             decision(item, "allowed_value")
         else:
             eligible.append(item)

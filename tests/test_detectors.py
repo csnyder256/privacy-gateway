@@ -137,3 +137,36 @@ def test_shared_cross_runtime_scope_fixtures(tmp_path):
         assert result.text == fixture["expected_text"], fixture["name"]
         if "expected_reason" in fixture:
             assert result.reason == fixture["expected_reason"], fixture["name"]
+
+
+def test_shared_cross_runtime_precedence_fixtures(tmp_path):
+    """An explicit deny-list match outranks an allow term for the same value.
+
+    The frozen precedence removes an allow-listed candidate *unless deny-listed*.
+    Applying the allow filter to a deny-list candidate let a value the operator
+    declared sensitive cross the boundary unchanged. TypeScript consumes the same
+    fixtures, so the two runtimes cannot drift on the precedence.
+    """
+    fixtures = json.loads(repo_path("conformance", "core-v1.json").read_text(encoding="utf-8"))
+    for fixture in fixtures["precedence"]:
+        policy = Policy(
+            name=fixture["name"],
+            rules=[
+                PolicyRule(
+                    entity=EntityType(fixture["entity"]),
+                    action=Action(fixture["action"]),
+                    reversible=False,
+                )
+            ],
+            allow_terms=list(fixture["allow_terms"]),
+            deny_terms={term: EntityType(entity) for term, entity in fixture["deny_terms"].items()},
+        )
+        gateway = PrivacyEngine(
+            Vault(tmp_path / f"{fixture['name']}.db"), detectors=[RegexDetector()]
+        )
+        result = gateway.transform(fixture["text"], policy=policy)
+        assert result.state.value == fixture["expected_state"], fixture["name"]
+        assert result.text == fixture["expected_text"], fixture["name"]
+        assert [item.detector for item in result.detections] == fixture["expected_detectors"], (
+            fixture["name"]
+        )

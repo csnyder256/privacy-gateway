@@ -6,6 +6,20 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- An explicit `deny_terms` entry was silently cancelled when the same value was also
+  in `allow_terms`. The frozen precedence removes an allow-listed candidate *unless it
+  is deny-listed*; the allow filter was applied to deny-list matches too, so a value the
+  operator had explicitly declared sensitive crossed the boundary unchanged whenever the
+  same term was also allow-listed. A deny-list match now outranks an allow term in both
+  runtimes, `conformance/core-v1.json` gained two `precedence` fixtures that Python and
+  `@privacy-gateway/core` must both pass, and a regex match on the same value is still
+  retired by the allow term.
+- CI: the `mcp==1.14.0` compatibility cell now pins `pydantic<2.14`. mcp 1.14 imports the
+  private symbol `pydantic._internal._typing_extra.eval_type_backport`, which pydantic 2.14
+  removed, so the cell failed at import once 2.14 shipped; the two newer mcp cells stay
+  unpinned and resolve their own pydantic.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
