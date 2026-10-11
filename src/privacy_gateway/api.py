@@ -72,7 +72,17 @@ def create_app(database_path: str | None = None) -> FastAPI:
 
     @app.post("/v1/sessions", response_model=SessionResponse)
     def create_session(request: SessionCreateRequest):
-        session_id, policy = engine.create_session(request.policy, request.preset, request.metadata)
+        try:
+            session_id, policy = engine.create_session(
+                request.policy, request.preset, request.metadata
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            # A rejected session request is a client error, not a server fault. An
+            # unknown preset is a ValueError and session metadata without
+            # PRIVACY_GATEWAY_MASTER_KEY is a RuntimeError; left uncaught both reached
+            # the caller as an opaque 500 while /v1/transform answers the same class of
+            # error with 422 and the reason.
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         return SessionResponse(session_id=session_id, policy=policy)
 
     @app.post("/v1/transform", response_model=TransformResponse)

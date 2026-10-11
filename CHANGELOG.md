@@ -6,6 +6,14 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- `POST /v1/sessions` returned an opaque `500` for two client errors every sibling
+  route answers with `422` and a reason. An unknown preset raises `ValueError` and
+  session `metadata` without `PRIVACY_GATEWAY_MASTER_KEY` raises `RuntimeError`; both
+  escaped the route, so a caller retrying on 5xx and a monitor counting server faults
+  read a rejected request as a gateway crash. The route now maps those errors to `422`,
+  as `/v1/transform`, `/v1/restore` and `/v1/restore/capsule` already do.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed

@@ -80,3 +80,33 @@ def test_expired_purge_route_is_not_shadowed_by_session_delete(tmp_path):
         "mappings": 0,
         "sessions": 0,
     }
+
+
+def test_session_create_maps_fail_closed_client_errors_to_422(tmp_path, monkeypatch):
+    """A rejected session request is a client error, never an opaque 500.
+
+    ``POST /v1/sessions`` was the one route that let the engine's fail-closed errors
+    escape: an unknown preset raises ``ValueError`` and session metadata without
+    ``PRIVACY_GATEWAY_MASTER_KEY`` raises ``RuntimeError``. Both reached the caller as
+    a 500, while ``/v1/transform`` answers the same class of error with 422 and the
+    reason. A client retrying on 5xx and a monitoring rule counting server faults both
+    read the failure wrong.
+    """
+    monkeypatch.delenv("PRIVACY_GATEWAY_MASTER_KEY", raising=False)
+    client = TestClient(create_app(str(tmp_path / "api.db")), raise_server_exceptions=False)
+
+    unknown_preset = client.post("/v1/sessions", json={"preset": "bogus"})
+    assert unknown_preset.status_code == 422
+    assert "Unknown preset" in unknown_preset.json()["detail"]
+
+    metadata_without_key = client.post(
+        "/v1/sessions", json={"preset": "balanced", "metadata": {"customer": "secret"}}
+    )
+    assert metadata_without_key.status_code == 422
+    assert "PRIVACY_GATEWAY_MASTER_KEY" in metadata_without_key.json()["detail"]
+
+    # The same route still creates a session when nothing is rejected.
+    created = client.post("/v1/sessions", json={"preset": "balanced"})
+    assert created.status_code == 200
+    assert created.json()["session_id"]
+    assert created.json()["policy"]["name"] == "balanced"
