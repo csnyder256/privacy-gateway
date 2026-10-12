@@ -16,6 +16,12 @@ minor version and fixes raise the patch version.
   stalled every request in the process. A disconnect now stops the read, sends no
   response, and never reaches the downstream app for a body the middleware could not
   protect. A regression test drives a partial body followed by `http.disconnect`.
+- CI's MCP floor step failed on every Python in the matrix. It installed
+  `mcp==1.14.0`, whose `fastmcp` imports pydantic's private `eval_type_backport`,
+  and left the already-installed pydantic 2.14 in place — that symbol is gone in
+  2.14.0, so the server died at import and the whole `python` job went red before
+  any of its other checks ran. The step now pins the pydantic line the floor was
+  built against (`pydantic<2.14`), which still ships wheels for 3.11 through 3.14.
 
 ## 0.4.1 — 2026-09-28
 

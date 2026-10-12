@@ -33,9 +33,16 @@ jobs:
       # Exercise the real server on each, not just its source text.
       # The floor, then the newest of each line. -U matters: a satisfied
       # requirement would otherwise leave the previous step's version in place.
+      #
+      # mcp 1.14 imports pydantic's private `eval_type_backport`, which pydantic
+      # dropped in 2.14.0 (mcp itself only stopped importing it in 1.22). A bare
+      # `pip install 'mcp==1.14.0'` leaves the already-installed pydantic 2.14 in
+      # place, so the server dies at import and the whole job goes red. Pin the
+      # pydantic line the floor was built against; 2.13.x still ships wheels for
+      # every Python in the matrix, so the floor is exercised on all of them.
       - name: MCP server on the oldest supported mcp (1.14)
         run: |
-          pip install 'mcp==1.14.0'
+          pip install 'mcp==1.14.0' 'pydantic<2.14'
           pytest tests/test_mcp_server.py
       - name: MCP server on mcp 1.x
         run: |
