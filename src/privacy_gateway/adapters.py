@@ -426,6 +426,16 @@ class PrivacyASGIMiddleware:
         more = True
         while more:
             event = await receive()
+            if event.get("type") == "http.disconnect":
+                # The client went away before the body finished. ``http.disconnect``
+                # is terminal: the server keeps returning it on every later
+                # ``receive()`` (uvicorn returns it for the rest of the connection),
+                # so treating a non-``http.request`` event as "keep waiting" spun this
+                # loop with no ``await`` that yields, hanging every request in the
+                # process. Stop reading and return; there is no one left to answer,
+                # and the downstream app must not run for a body this middleware
+                # could not protect.
+                return
             if event.get("type") != "http.request":
                 continue
             chunks.append(event.get("body", b""))

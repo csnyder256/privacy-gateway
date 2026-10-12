@@ -6,6 +6,23 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The ASGI middleware hung the whole event loop when a client disconnected
+  mid-request. It read the body in a `while more_body` loop that treated any
+  non-`http.request` event as "keep waiting". `http.disconnect` is terminal — the
+  server keeps returning it on every later `receive()` (uvicorn returns it for the
+  rest of the connection) — and the `await receive()` in that branch does not yield,
+  so one client that vanished before its body finished spun the loop forever and
+  stalled every request in the process. A disconnect now stops the read, sends no
+  response, and never reaches the downstream app for a body the middleware could not
+  protect. A regression test drives a partial body followed by `http.disconnect`.
+- CI's MCP floor step failed on every Python in the matrix. It installed
+  `mcp==1.14.0`, whose `fastmcp` imports pydantic's private `eval_type_backport`,
+  and left the already-installed pydantic 2.14 in place — that symbol is gone in
+  2.14.0, so the server died at import and the whole `python` job went red before
+  any of its other checks ran. The step now pins the pydantic line the floor was
+  built against (`pydantic<2.14`), which still ships wheels for 3.11 through 3.14.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
