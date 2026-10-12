@@ -6,6 +6,17 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The ASGI middleware hung the whole event loop when a client disconnected
+  mid-request. It read the body in a `while more_body` loop that treated any
+  non-`http.request` event as "keep waiting". `http.disconnect` is terminal — the
+  server keeps returning it on every later `receive()` (uvicorn returns it for the
+  rest of the connection) — and the `await receive()` in that branch does not yield,
+  so one client that vanished before its body finished spun the loop forever and
+  stalled every request in the process. A disconnect now stops the read, sends no
+  response, and never reaches the downstream app for a body the middleware could not
+  protect. A regression test drives a partial body followed by `http.disconnect`.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed

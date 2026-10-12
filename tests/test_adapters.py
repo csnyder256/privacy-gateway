@@ -499,6 +499,55 @@ def test_asgi_middleware_fails_closed_on_a_blocked_transform(tmp_path):
     assert "reversible policy requires" in text_response.json()["detail"]
 
 
+def test_asgi_middleware_stops_on_a_client_disconnect_without_spinning(engine):
+    """A client that disconnects mid-body must not wedge the event loop.
+
+    ``http.disconnect`` is terminal: once the client is gone the server keeps
+    returning it on every later ``receive()`` (uvicorn returns it for the rest of
+    the connection). Treating a non-``http.request`` event as "keep waiting" made
+    this loop call ``receive()`` forever without an ``await`` that yields, hanging
+    every request in the process. The middleware must stop reading, answer
+    nothing, and never reach the downstream app for a body it could not protect.
+    """
+    import asyncio
+
+    downstream = FastAPI()
+    reached = []
+
+    @downstream.post("/echo")
+    async def echo(request: Request):
+        reached.append(await request.body())
+        return {"ok": True}
+
+    wrapped = PrivacyASGIMiddleware(downstream, engine)
+    events = [
+        {"type": "http.request", "body": b'{"message": "Email a@b.com"', "more_body": True},
+        {"type": "http.disconnect"},
+    ]
+    calls = []
+
+    async def receive():
+        calls.append(1)
+        if len(calls) > len(events):
+            raise AssertionError("middleware kept reading after http.disconnect")
+        return events[len(calls) - 1]
+
+    sent = []
+
+    async def send(message):
+        sent.append(message)
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "headers": [(b"content-type", b"application/json")],
+    }
+    asyncio.run(asyncio.wait_for(wrapped(scope, receive, send), timeout=5))
+    assert len(calls) == len(events)
+    assert reached == []
+    assert sent == []
+
+
 def test_proxy_endpoint_body_limit_and_non_json(monkeypatch, tmp_path):
     monkeypatch.setenv("PRIVACY_GATEWAY_OPENAI_UPSTREAM", "https://api.example/v1")
     monkeypatch.setenv("PRIVACY_GATEWAY_MAX_BODY_BYTES", "32")
