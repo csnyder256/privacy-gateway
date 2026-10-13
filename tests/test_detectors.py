@@ -89,6 +89,22 @@ def test_allow_list_wins_and_deny_list_adds_custom_detection():
     ]
 
 
+def test_ipv4_dec_octets_have_no_leading_zero_form():
+    """RFC 3986's `dec-octet` has no leading-zero alternative, and the Python engine's
+    `ipaddress` reference rejects one, so `01.2.3.4` and `1.2.3.04` are not IPv4
+    addresses. IPv6 groups are `1*4HEXDIG` and keep their leading zeros.
+
+    `@privacy-gateway/core` validated the dotted quad with its own three-digit check
+    instead, so it accepted the leading-zero octets: the same policy redacted an
+    IP-shaped token in the browser/Node core that the server forwarded untouched, and
+    the two runtimes' audit records disagreed. The shared `detection` fixtures pin both
+    directions for both runtimes; this test names the rule the fixtures encode.
+    """
+    text = "hosts 01.2.3.4, 1.2.3.04, 1.2.3.4 and 2001:0db8::1"
+    found = resolve_detections(text, policy_for(EntityType.IP_ADDRESS), [RegexDetector()])
+    assert [item.value for item in found] == ["1.2.3.4", "2001:0db8::1"]
+
+
 def test_shared_cross_runtime_detection_fixtures():
     fixtures = json.loads(repo_path("conformance/core-v1.json").read_text(encoding="utf-8"))
     for fixture in fixtures["detection"]:

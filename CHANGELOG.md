@@ -6,6 +6,18 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- `@privacy-gateway/core` treated an IPv4 octet with a leading zero as an address, so
+  `01.2.3.4` and `1.2.3.04` were redacted in the browser/Node core while the Python
+  engine forwarded them untouched. RFC 3986's `dec-octet` has no leading-zero
+  alternative, and the server's `ipaddress` reference rejects one, so Python was
+  right and the two runtimes disagreed about the same policy: the same input produced
+  a replacement and an audit row in one runtime and a pass-through in the other. The
+  core now validates each dotted-quad octet as `0` or a nonzero digit followed by up
+  to two digits. IPv6 groups are `1*4HEXDIG` and still keep leading zeros
+  (`2001:0db8::1`). `conformance/core-v1.json` gained two `detection` fixtures that
+  both runtimes must pass, so the boundary cannot drift apart again.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
