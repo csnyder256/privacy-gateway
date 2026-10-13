@@ -6,6 +6,26 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- `@privacy-gateway/core` treated an IPv4 octet with a leading zero as an address, so
+  `01.2.3.4` and `1.2.3.04` were redacted in the browser/Node core while the Python
+  engine forwarded them untouched. RFC 3986's `dec-octet` has no leading-zero
+  alternative, and the server's `ipaddress` reference rejects one, so Python was
+  right and the two runtimes disagreed about the same policy: the same input produced
+  a replacement and an audit row in one runtime and a pass-through in the other. The
+  core now validates each dotted-quad octet as `0` or a nonzero digit followed by up
+  to two digits. IPv6 groups are `1*4HEXDIG` and still keep leading zeros
+  (`2001:0db8::1`). `conformance/core-v1.json` gained two `detection` fixtures that
+  both runtimes must pass, so the boundary cannot drift apart again.
+- CI's MCP floor cell failed on every Python in the matrix, and it took the `mcp 1.x`
+  and `mcp 2.x` cells down with it, so no cell exercised an SDK at all. The step
+  installed `mcp==1.14.0` but left the runner's pydantic 2.14 in place, and mcp 1.14's
+  `fastmcp` imports `pydantic._internal._typing_extra.eval_type_backport`, which
+  pydantic 2.14.0 removed. The floor now pins `pydantic<2.14` (2.13.x, whose
+  pydantic-core ships wheels for 3.11 through 3.14) and imports the pair before the
+  suite runs, so a silently satisfied pin fails on its own line instead of surfacing
+  as a pytest collection error.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed

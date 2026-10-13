@@ -292,7 +292,15 @@ function iban(value: string): boolean {
 function validIp(value: string): boolean {
   if (!value.includes(":")) {
     const parts = value.split(".");
-    return parts.length === 4 && parts.every((part) => /^\d{1,3}$/u.test(part) && Number(part) <= 255);
+    // RFC 3986 `dec-octet` has no leading-zero form, and the Python engine's
+    // `ipaddress` reference rejects one, so "01.2.3.4" and "1.2.3.04" are not IPv4
+    // addresses. `\d{1,3}` accepted them, so the browser/Node core redacted an
+    // IP-shaped token the server forwarded untouched and the two runtimes' audit
+    // records disagreed. IPv6 groups are `1*4HEXDIG` and keep leading zeros.
+    return (
+      parts.length === 4 &&
+      parts.every((part) => /^(?:0|[1-9]\d{0,2})$/u.test(part) && Number(part) <= 255)
+    );
   }
   if ((value.match(/::/gu) ?? []).length > 1) return false;
   const sides = value.split("::");

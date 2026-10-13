@@ -52,6 +52,23 @@
   ],
   "detection": [
     {
+      "name": "ipv4-leading-zero-octets-are-not-addresses",
+      "preset": "strict",
+      "text": "hosts 01.2.3.4, 1.2.3.04, 1.2.3.4",
+      "expected": [
+        {"entity": "IP_ADDRESS", "start": 26, "end": 33, "value": "1.2.3.4"}
+      ]
+    },
+    {
+      "name": "ipv6-groups-keep-leading-zeros",
+      "preset": "strict",
+      "text": "groups 2001:0db8::1 and fe80::1",
+      "expected": [
+        {"entity": "IP_ADDRESS", "start": 7, "end": 19, "value": "2001:0db8::1"},
+        {"entity": "IP_ADDRESS", "start": 24, "end": 31, "value": "fe80::1"}
+      ]
+    },
+    {
       "name": "unicode-prefix-email-and-card",
       "preset": "finance",
       "text": "Zoë: zoe@example.com / 4111 1111 1111 1111",
