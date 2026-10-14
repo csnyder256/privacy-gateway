@@ -17,4 +17,12 @@ assert (root / "docs/releases" / ("v" + version + ".md")).is_file(), "Release no
 notes = root / "docs/releases" / ("v" + version + ".md")
 deployment_link = "https://github.com/csnyder256/" + config["name"] + "/blob/v" + version + "/DEPLOYMENT.md"
 assert "(" + deployment_link + ")" in notes.read_text(), "Release notes need a version-specific deployment link"
+# The versioned link above sends readers to DEPLOYMENT.md, so the image it tells
+# them to pull must be this release. Nothing checked it, and it still pinned
+# v0.4.1 after v0.5.0 shipped.
+pinned = re.search(
+    r"ghcr\.io/csnyder256/" + re.escape(config["name"]) + r":(v[0-9]+\.[0-9]+\.[0-9]+)",
+    (root / "DEPLOYMENT.md").read_text(),
+)
+assert pinned and pinned.group(1) == "v" + version, "DEPLOYMENT.md must pin this release's image"
 print("Release metadata agrees on", version)

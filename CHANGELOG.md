@@ -6,6 +6,26 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The release gate could not see the two npm workspace packages, so their version drifted
+  three minor releases behind. `scripts/verify_release.py` compares `VERSION` against the
+  files `release.json` names, and `release.json`'s `package_json` list was empty:
+  `packages/core/package.json` and `packages/client/package.json` (both declaring
+  `publishConfig.access: public`) still said `0.3.0` while the release was `0.5.0`. Every
+  release through 0.3.0 bumped both manifests in the same commit as `pyproject.toml` and
+  `src/privacy_gateway/__init__.py`, so they share one version; the omission was the drift.
+  Both now read `0.5.0`, `package-lock.json` records the same two versions (npm
+  workspaces mirror each manifest's version into the lock, and regenerating it with
+  `npm install --package-lock-only` produces no further change), and `release.json` lists
+  them so the gate checks them on every pull request and before every release.
+- `DEPLOYMENT.md` still pinned `ghcr.io/csnyder256/privacy-gateway:v0.4.1` after v0.5.0
+  shipped, and the v0.5.0 release notes link readers to that exact file, so an operator
+  following the release notes pulled the previous release's image. The pin is now `v0.5.0`,
+  and `verify_release.py` fails when it disagrees with `VERSION`. A new
+  `tests/test_release_metadata.py` pins that every workspace package is both listed in
+  `release.json` and at the release version, so a future package cannot silently escape the
+  gate.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
