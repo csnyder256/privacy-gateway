@@ -7,6 +7,19 @@ minor version and fixes raise the patch version.
 ## Unreleased
 
 ### Fixed
+- The two runtimes disagreed about which URL-shaped tokens are URLs, because each used a
+  different authority grammar. RFC 3986's `authority` ends in `[ ":" port ]` with
+  `port = *DIGIT` -- any run of digits, no upper bound, and nothing else. The Python
+  recognizer used `urlsplit`, which never validates the authority (`urlsplit` returns the
+  host for `https://example.com:abc/` and only raises when the `port` property is read), so
+  the server redacted `https://example.com:abc/path`, which is not a URI. The browser/Node
+  core used the WHATWG parser, which rejects a numeric port above 65535, so it forwarded
+  `https://example.com:65536/path` unredacted while the server redacted it -- the same
+  policy, the same input, a replacement and an audit row in one runtime and a pass-through
+  in the other. Both runtimes now validate the port against the RFC 3986 grammar, with the
+  port taken after the closing bracket of an IP-literal. `conformance/core-v1.json` gained
+  five `detection` fixtures that both runtimes must pass, so the boundary cannot drift
+  apart again.
 - The release gate could not see the two npm workspace packages, so their version drifted
   three minor releases behind. `scripts/verify_release.py` compares `VERSION` against the
   files `release.json` names, and `release.json`'s `package_json` list was empty:

@@ -121,9 +121,36 @@ class RegexDetector:
         )
 
     @staticmethod
+    def _authority_port(netloc: str) -> str | None:
+        """The RFC 3986 port of an authority, or ``None`` when it has none.
+
+        ``authority = [ userinfo "@" ] host [ ":" port ]`` and ``port = *DIGIT``
+        -- there is no upper bound, and nothing but a digit is a port.
+        ``urlsplit`` validates none of that: it hands back the host for
+        ``example.com:abc`` and ``example.com:99999`` and only complains when the
+        ``port`` property is read, so a URL check that never reads ``port``
+        accepted strings that are not URIs and accepted ones whose port the
+        browser/Node core rejects. A bracketed IP-literal keeps its colons, so
+        its port, when present, follows the closing bracket; a ``reg-name``
+        cannot contain a colon, so the first colon ends the host.
+        """
+        authority = netloc.rsplit("@", 1)[-1]
+        if authority.startswith("["):
+            end = authority.find("]")
+            if end < 0:
+                raise ValueError("unterminated IP literal")
+            rest = authority[end + 1 :]
+            if rest and not rest.startswith(":"):
+                raise ValueError("authority has trailing text after its IP literal")
+            return rest[1:] if rest else None
+        _, separator, port = authority.partition(":")
+        return port if separator else None
+
+    @staticmethod
     def _valid_url(value: str) -> bool:
         try:
             parsed = urlsplit(value)
+            port = RegexDetector._authority_port(parsed.netloc)
             return (
                 value.isascii()
                 and parsed.scheme.lower() in {"http", "https"}
@@ -131,6 +158,7 @@ class RegexDetector:
                 and "@" not in parsed.netloc
                 and not parsed.username
                 and not parsed.password
+                and (port is None or re.fullmatch(r"[0-9]*", port) is not None)
             )
         except ValueError:
             return False

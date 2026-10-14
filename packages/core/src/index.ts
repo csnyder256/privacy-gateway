@@ -301,14 +301,47 @@ function validIp(value: string): boolean {
   return value.includes("::") ? groups.length < 8 : groups.length === 8;
 }
 
+/** Split an RFC 3986 authority into its host and port, or `null` when malformed.
+ *
+ * `authority = [ userinfo "@" ] host [ ":" port ]` and `port = *DIGIT`, so
+ * nothing but a digit is a port and there is no upper bound. A bracketed
+ * IP-literal keeps its colons, so its port, when present, follows the closing
+ * bracket; a `reg-name` cannot contain a colon, so the first colon ends the host.
+ */
+function splitAuthority(authority: string): { host: string; port: string | null } | null {
+  if (authority.startsWith("[")) {
+    const end = authority.indexOf("]");
+    if (end < 0) return null;
+    const rest = authority.slice(end + 1);
+    if (rest !== "" && !rest.startsWith(":")) return null;
+    return { host: authority.slice(0, end + 1), port: rest === "" ? null : rest.slice(1) };
+  }
+  const colon = authority.indexOf(":");
+  return colon < 0
+    ? { host: authority, port: null }
+    : { host: authority.slice(0, colon), port: authority.slice(colon + 1) };
+}
+
 function validUrl(value: string): boolean {
   try {
-    const parsed = new URL(value);
-    const authority = value.slice(value.indexOf("://") + 3).split(/[/?#]/u, 1)[0]!;
+    const schemeEnd = value.indexOf("://");
+    if (schemeEnd < 0) return false;
+    const scheme = value.slice(0, schemeEnd).toLowerCase();
+    if (scheme !== "http" && scheme !== "https") return false;
+    const authority = value.slice(schemeEnd + 3).split(/[/?#]/u, 1)[0]!;
+    if (authority === "" || authority.includes("@")) return false;
+    const parts = splitAuthority(authority);
+    if (parts === null) return false;
+    // RFC 3986 `port = *DIGIT` has no upper bound, but the WHATWG parser behind
+    // `new URL` rejects a numeric port above 65535. Relying on it meant a
+    // URL-shaped token the server redacted (`https://example.com:99999/path`)
+    // was forwarded unredacted here, and the two runtimes' audit records
+    // disagreed about the same input. Validate the port against the grammar and
+    // hand the parser a port it accepts.
+    if (parts.port !== null && !/^[0-9]*$/u.test(parts.port)) return false;
+    const parsed = new URL(`${scheme}://${parts.host}:1/`);
     return (
-      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
       parsed.hostname.length > 0 &&
-      !authority.includes("@") &&
       parsed.username === "" &&
       parsed.password === "" &&
       /^[\x00-\x7F]+$/u.test(value)

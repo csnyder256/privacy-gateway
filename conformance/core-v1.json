@@ -52,6 +52,44 @@
   ],
   "detection": [
     {
+      "name": "url-numeric-port-has-no-range-limit",
+      "preset": "strict",
+      "text": "https://example.com:65536/path",
+      "expected": [
+        {"entity": "URL", "start": 0, "end": 30, "value": "https://example.com:65536/path"}
+      ]
+    },
+    {
+      "name": "url-non-numeric-port-is-not-a-uri",
+      "preset": "strict",
+      "text": "https://example.com:abc/path",
+      "expected": []
+    },
+    {
+      "name": "url-port-follows-the-ip-literal-brackets",
+      "preset": "strict",
+      "text": "https://[2001:db8::1]:99999/x",
+      "expected": [
+        {"entity": "URL", "start": 0, "end": 29, "value": "https://[2001:db8::1]:99999/x"}
+      ]
+    },
+    {
+      "name": "url-non-numeric-port-after-an-ip-literal-is-not-a-uri",
+      "preset": "strict",
+      "text": "https://[2001:db8::1]:abc/x",
+      "expected": [
+        {"entity": "IP_ADDRESS", "start": 9, "end": 20, "value": "2001:db8::1"}
+      ]
+    },
+    {
+      "name": "url-empty-port-is-still-a-uri",
+      "preset": "strict",
+      "text": "https://example.com:/path",
+      "expected": [
+        {"entity": "URL", "start": 0, "end": 25, "value": "https://example.com:/path"}
+      ]
+    },
+    {
       "name": "unicode-prefix-email-and-card",
       "preset": "finance",
       "text": "Zoë: zoe@example.com / 4111 1111 1111 1111",
