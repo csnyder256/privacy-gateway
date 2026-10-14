@@ -89,6 +89,36 @@ def test_allow_list_wins_and_deny_list_adds_custom_detection():
     ]
 
 
+def test_url_port_is_rfc_3986_star_digit_with_no_range_limit():
+    """RFC 3986's `authority` ends in `[ ":" port ]` and `port = *DIGIT`: a port is
+    any run of digits, with no upper bound, and nothing else is a port. The two
+    runtimes had to agree on that and did not.
+
+    `urlsplit` never validates the authority -- `urlsplit("https://example.com:abc/")`
+    returns the host and only raises when the `port` property is read -- so the
+    server redacted `https://example.com:abc/path`, which is not a URI. The
+    browser/Node core validated with the WHATWG parser instead, which rejects a
+    numeric port above 65535, so it forwarded `https://example.com:65536/path`
+    unredacted while the server redacted it. Same policy, same input, a replacement
+    and an audit row in one runtime and a pass-through in the other. The shared
+    `detection` fixtures pin both directions for both runtimes.
+    """
+    text = "https://example.com:65536/path https://example.com:abc/path"
+    found = resolve_detections(text, policy_for(EntityType.URL), [RegexDetector()])
+    assert [item.value for item in found] == ["https://example.com:65536/path"]
+
+
+def test_url_port_after_an_ip_literal_is_outside_the_brackets():
+    """A bracketed IP-literal keeps its colons, so its port follows the closing
+    bracket. Splitting the authority on its first colon would read `2001:db8::1]`
+    as the host, and splitting on the last one would read `1]:abc` as the port, so
+    the separator has to respect the brackets.
+    """
+    text = "https://[2001:db8::1]:99999/x https://[2001:db8::1]:abc/x"
+    found = resolve_detections(text, policy_for(EntityType.URL), [RegexDetector()])
+    assert [item.value for item in found] == ["https://[2001:db8::1]:99999/x"]
+
+
 def test_shared_cross_runtime_detection_fixtures():
     fixtures = json.loads(repo_path("conformance/core-v1.json").read_text(encoding="utf-8"))
     for fixture in fixtures["detection"]:

@@ -13,7 +13,7 @@ Presidio, MCP and PostgreSQL extras are documented in [README.md](README.md).
 The published image now supports Linux AMD64 and ARM64:
 
 ```sh
-docker pull ghcr.io/csnyder256/privacy-gateway:v0.4.1
+docker pull ghcr.io/csnyder256/privacy-gateway:v0.5.0
 ```
 
 Use the existing [Compose configuration](compose.yml) and [README container guide](README.md)

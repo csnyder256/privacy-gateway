@@ -6,6 +6,39 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The two runtimes disagreed about which URL-shaped tokens are URLs, because each used a
+  different authority grammar. RFC 3986's `authority` ends in `[ ":" port ]` with
+  `port = *DIGIT` -- any run of digits, no upper bound, and nothing else. The Python
+  recognizer used `urlsplit`, which never validates the authority (`urlsplit` returns the
+  host for `https://example.com:abc/` and only raises when the `port` property is read), so
+  the server redacted `https://example.com:abc/path`, which is not a URI. The browser/Node
+  core used the WHATWG parser, which rejects a numeric port above 65535, so it forwarded
+  `https://example.com:65536/path` unredacted while the server redacted it -- the same
+  policy, the same input, a replacement and an audit row in one runtime and a pass-through
+  in the other. Both runtimes now validate the port against the RFC 3986 grammar, with the
+  port taken after the closing bracket of an IP-literal. `conformance/core-v1.json` gained
+  five `detection` fixtures that both runtimes must pass, so the boundary cannot drift
+  apart again.
+- The release gate could not see the two npm workspace packages, so their version drifted
+  three minor releases behind. `scripts/verify_release.py` compares `VERSION` against the
+  files `release.json` names, and `release.json`'s `package_json` list was empty:
+  `packages/core/package.json` and `packages/client/package.json` (both declaring
+  `publishConfig.access: public`) still said `0.3.0` while the release was `0.5.0`. Every
+  release through 0.3.0 bumped both manifests in the same commit as `pyproject.toml` and
+  `src/privacy_gateway/__init__.py`, so they share one version; the omission was the drift.
+  Both now read `0.5.0`, `package-lock.json` records the same two versions (npm
+  workspaces mirror each manifest's version into the lock, and regenerating it with
+  `npm install --package-lock-only` produces no further change), and `release.json` lists
+  them so the gate checks them on every pull request and before every release.
+- `DEPLOYMENT.md` still pinned `ghcr.io/csnyder256/privacy-gateway:v0.4.1` after v0.5.0
+  shipped, and the v0.5.0 release notes link readers to that exact file, so an operator
+  following the release notes pulled the previous release's image. The pin is now `v0.5.0`,
+  and `verify_release.py` fails when it disagrees with `VERSION`. A new
+  `tests/test_release_metadata.py` pins that every workspace package is both listed in
+  `release.json` and at the release version, so a future package cannot silently escape the
+  gate.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
