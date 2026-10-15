@@ -39,6 +39,13 @@ minor version and fixes raise the patch version.
   `unsigned_decimal_epoch_seconds_no_leading_zero` and
   `lowercase_canonical_uuid_v4` on the way in and on the way out, and the lookup is
   case-insensitive so a re-casing proxy cannot break verification.
+- CI's MCP floor cell failed on every Python in the matrix, and it took the `mcp 1.x`
+  and `mcp 2.x` cells down with it, so no cell exercised an SDK at all. The step
+  installed `mcp==1.14.0` but left the runner's pydantic 2.14 in place, and mcp 1.14's
+  `fastmcp` imports `pydantic._internal._typing_extra.eval_type_backport`, which
+  pydantic 2.14.0 removed. The floor now pins `pydantic<2.14` and imports the pair
+  before the suite runs, so a silently satisfied pin fails on its own line instead of
+  surfacing as a pytest collection error.
 
 ## 0.4.1 — 2026-09-28
 
