@@ -6,6 +6,40 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- The signed-webhook wire protocol did not match the contract it is frozen
+  against. `WebhookVerifier` emitted and expected `x-privacy-timestamp`,
+  `x-privacy-delivery` and `x-privacy-signature` with a `sha256=` signature
+  prefix, while `contracts/compatibility-v1.json` (`adapters.webhook`) and
+  `docs/normative-contract.md` both freeze `X-Privacy-Gateway-Timestamp`,
+  `X-Privacy-Gateway-Delivery` and `X-Privacy-Gateway-Signature` with a `v1=`
+  prefix — so a peer that implemented the documented protocol could never
+  authenticate against the shipped verifier: every call failed as
+  `invalid webhook authentication headers`. The code now uses the frozen names
+  and prefix, and `tests/test_adapters.py` reads them out of the manifest rather
+  than restating them, so the two cannot drift again silently. The old names also
+  collided with the gateway's own `x-privacy-*` control-header namespace, which
+  the stage-3 contract requires never to reach a provider. (`X-Privacy-Gateway-Key-Id`
+  and the active/retired/revoked key-state model are still not implemented; the
+  verifier remains single-secret and in-memory.)
+- The webhook replay window was inclusive and measured from receipt.
+  `abs(now - timestamp) > tolerance` accepted a skew of exactly
+  `replay_window_seconds_exclusive` (300 s), and the accepted-delivery
+  bookkeeping stored `max(now, timestamp) + tolerance`, so a request received late
+  stayed replay-blocked past its documented `signed_timestamp_plus_replay_window`
+  deadline. The window is now strict and the deadline is the signed timestamp plus
+  the window.
+- Webhook headers were parsed with bare `int()` and `uuid.UUID()`, neither of which
+  is the frozen grammar. The timestamp header accepted `+3000`, `03000`, `3_000`,
+  ` 3000` and a trailing newline; a non-v4 UUID was accepted end to end as a
+  delivery ID; and `sign()` happily *emitted* an uppercase, braced or
+  `urn:uuid:`-prefixed delivery ID that its own `verify()` then rejected as
+  `invalid webhook signature`, because signing used the raw string while
+  verification normalized it. Both headers are now validated against
+  `unsigned_decimal_epoch_seconds_no_leading_zero` and
+  `lowercase_canonical_uuid_v4` on the way in and on the way out, and the lookup is
+  case-insensitive so a re-casing proxy cannot break verification.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
