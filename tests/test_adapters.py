@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import json
 
 import httpx
@@ -372,6 +374,120 @@ def test_provider_header_allowlist():
     assert forwarded == {"authorization": "Bearer fake", "x-api-key": "fake"}
 
 
+def test_webhook_wire_protocol_matches_the_frozen_manifest():
+    """Header names, the `v1=` signature prefix and the window come from the manifest.
+
+    ``WebhookVerifier`` shipped `x-privacy-timestamp` / `x-privacy-delivery` /
+    `x-privacy-signature` with a `sha256=` signature prefix, while
+    `contracts/compatibility-v1.json` and `docs/normative-contract.md` both freeze
+    `X-Privacy-Gateway-*` and a `v1=` prefix. An integrator who implemented the
+    documented protocol could therefore never authenticate against the shipped
+    verifier: every call raised `invalid webhook authentication headers`. The
+    manifest is the frozen artifact, so the code is what moved. The names are also
+    load-bearing: `x-privacy-*` is the gateway's own control-header namespace, which
+    the stage-3 contract requires never to reach a provider.
+    """
+    webhook = json.loads(repo_path("contracts/compatibility-v1.json").read_text(encoding="utf-8"))[
+        "adapters"
+    ]["webhook"]
+    assert WebhookVerifier.TIMESTAMP_HEADER == webhook["headers"]["timestamp"]
+    assert WebhookVerifier.DELIVERY_HEADER == webhook["headers"]["delivery"]
+    assert WebhookVerifier.SIGNATURE_HEADER == webhook["headers"]["signature"]
+    assert webhook["signature"].startswith("v1=")
+    assert webhook["timestamp"] == "unsigned_decimal_epoch_seconds_no_leading_zero"
+    assert webhook["delivery"] == "lowercase_canonical_uuid_v4"
+    assert webhook["delivery_retention_deadline"] == "signed_timestamp_plus_replay_window"
+    assert webhook["replay_window_seconds_exclusive"] == WebhookVerifier(b"x").tolerance_seconds
+
+    verifier = WebhookVerifier(b"test-secret")
+    body = b'{"ok":true}'
+    signed = verifier.sign(body, timestamp=1_000)
+    assert set(signed) == {
+        webhook["headers"]["timestamp"],
+        webhook["headers"]["delivery"],
+        webhook["headers"]["signature"],
+    }
+    assert len(signed[WebhookVerifier.SIGNATURE_HEADER].removeprefix("v1=")) == 64
+    verifier.verify(body, signed, now=1_100)
+
+
+def test_webhook_signature_bytes_are_timestamp_dot_delivery_dot_body():
+    """Hand-computed vector for `timestamp_ascii || "." || delivery || "." || body`."""
+    verifier = WebhookVerifier(b"test-secret")
+    body = b'{"ok":true}'
+    delivery = "00000000-0000-4000-8000-000000000001"
+    headers = verifier.sign(body, timestamp=1_000, delivery_id=delivery)
+    expected = hmac.new(
+        b"test-secret", f"1000.{delivery}.".encode() + body, hashlib.sha256
+    ).hexdigest()
+    assert headers[WebhookVerifier.SIGNATURE_HEADER] == f"v1={expected}"
+
+
+def test_webhook_replay_window_is_exclusive_and_its_deadline_is_absolute():
+    """`abs(effective_now - timestamp) < 300` is strict, and retention runs from the
+    *signed* timestamp, never from receipt.
+
+    The shipped check was `abs(now - timestamp) > tolerance`, so a skew of exactly
+    300 seconds was accepted -- a second of replay window the manifest calls
+    exclusive. The shipped bookkeeping stored `max(now, timestamp) + tolerance`, so a
+    request received late stayed replay-blocked past its documented deadline.
+    """
+    verifier = WebhookVerifier(b"test-secret", tolerance_seconds=300)
+    body = b'{"ok":true}'
+    delivery = "00000000-0000-4000-8000-000000000001"
+    signed = verifier.sign(body, timestamp=1_000, delivery_id=delivery)
+    verifier.verify(body, signed, now=1_299)
+    with pytest.raises(AdapterBlocked, match="tolerance"):
+        verifier.verify(body, signed, now=1_300)
+
+    late = WebhookVerifier(b"test-secret", tolerance_seconds=300)
+    signed_late = late.sign(body, timestamp=1_000, delivery_id=delivery)
+    late.verify(body, signed_late, now=1_250)
+    assert late._seen[delivery] == 1_300
+
+
+def test_webhook_timestamp_and_delivery_headers_use_their_documented_grammar():
+    """`unsigned_decimal_epoch_seconds_no_leading_zero` and `lowercase_canonical_uuid_v4`.
+
+    The shipped verifier read the timestamp with bare `int()`, which also accepted
+    `+3000`, `03000`, `3_000`, surrounding whitespace and a trailing newline, and it
+    normalized the delivery with `uuid.UUID()`, which also accepts uppercase, braces,
+    a `urn:uuid:` prefix and non-v4 UUIDs. `sign()` signed the raw string while
+    `verify()` signed the normalized one, so an uppercase or braced delivery ID was
+    emitted and then rejected as a signature failure by the verifier that produced it.
+    """
+    verifier = WebhookVerifier(b"test-secret", tolerance_seconds=300)
+    body = b'{"ok":true}'
+    good = verifier.sign(body, timestamp=1_000, delivery_id="00000000-0000-4000-8000-000000000001")
+    for value in ("03000", "+3000", "3_000", " 3000", "3000\n", "0xbb8", ""):
+        with pytest.raises(AdapterBlocked, match="timestamp header"):
+            verifier.verify(body, {**good, WebhookVerifier.TIMESTAMP_HEADER: value}, now=1_100)
+    for value in (
+        "00000000-0000-4000-8000-00000000000A",
+        "00000000-0000-1000-8000-000000000001",
+        "00000000-0000-4000-0000-000000000001",
+        "{00000000-0000-4000-8000-000000000001}",
+        "urn:uuid:00000000-0000-4000-8000-000000000001",
+        "",
+    ):
+        with pytest.raises(AdapterBlocked, match="delivery header"):
+            verifier.verify(body, {**good, WebhookVerifier.DELIVERY_HEADER: value}, now=1_100)
+    with pytest.raises(AdapterBlocked, match="unsigned"):
+        verifier.sign(body, timestamp=-1)
+    with pytest.raises(AdapterBlocked, match="UUIDv4"):
+        verifier.sign(body, timestamp=1_000, delivery_id="00000000-0000-4000-8000-00000000000A")
+
+
+def test_webhook_header_lookup_is_case_insensitive():
+    """HTTP field names are case-insensitive, so a re-casing proxy must not break it."""
+    verifier = WebhookVerifier(b"test-secret", tolerance_seconds=300)
+    body = b'{"ok":true}'
+    signed = verifier.sign(
+        body, timestamp=1_000, delivery_id="00000000-0000-4000-8000-000000000001"
+    )
+    verifier.verify(body, {key.lower(): value for key, value in signed.items()}, now=1_100)
+
+
 def test_webhook_signatures_expiry_tamper_and_replay():
     verifier = WebhookVerifier(b"test-secret", tolerance_seconds=300)
     body = b'{"ok":true}'
@@ -389,6 +505,8 @@ def test_webhook_signatures_expiry_tamper_and_replay():
         verifier.verify(body, expired, now=3_301)
     with pytest.raises(AdapterBlocked, match="JSON"):
         verifier.sign(b"not-json")
+    with pytest.raises(AdapterBlocked, match="authentication"):
+        verifier.verify(body, {}, now=1_000)
 
 
 def test_python_client_round_trip_and_errors(tmp_path):

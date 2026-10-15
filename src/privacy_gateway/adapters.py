@@ -3,11 +3,12 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 from .detectors import DetectionFailure
@@ -487,11 +488,35 @@ class PrivacyASGIMiddleware:
         await self.app(updated_scope, protected_receive, send)
 
 
+# Wire header names, the `v1=` signature prefix, the timestamp grammar and the
+# delivery grammar are frozen by `contracts/compatibility-v1.json`
+# (`adapters.webhook`) and restated in `docs/normative-contract.md`. They are
+# deliberately not `x-privacy-*`: that prefix is the gateway's own *control*
+# header namespace (`x-privacy-preset`, `x-privacy-session-id`), and the
+# stage-3 contract requires control headers never to reach a provider. A
+# webhook signature is a peer-facing credential, not a control field.
+WEBHOOK_TIMESTAMP_HEADER = "X-Privacy-Gateway-Timestamp"
+WEBHOOK_DELIVERY_HEADER = "X-Privacy-Gateway-Delivery"
+WEBHOOK_SIGNATURE_HEADER = "X-Privacy-Gateway-Signature"
+
+# `unsigned_decimal_epoch_seconds_no_leading_zero`
+_UNSIGNED_DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)")
+# `lowercase_canonical_uuid_v4`
+_CANONICAL_UUID_V4 = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+)
+_SIGNATURE_PREFIX = "v1="
+
+
 @dataclass
 class WebhookVerifier:
     secret: bytes
     tolerance_seconds: int = 300
     _seen: dict[str, int] = field(default_factory=dict)
+
+    TIMESTAMP_HEADER: ClassVar[str] = WEBHOOK_TIMESTAMP_HEADER
+    DELIVERY_HEADER: ClassVar[str] = WEBHOOK_DELIVERY_HEADER
+    SIGNATURE_HEADER: ClassVar[str] = WEBHOOK_SIGNATURE_HEADER
 
     @staticmethod
     def signed_bytes(timestamp: int, delivery_id: str, body: bytes) -> bytes:
@@ -500,16 +525,20 @@ class WebhookVerifier:
     def sign(self, body: bytes, *, timestamp: int | None = None, delivery_id: str | None = None):
         self._require_json_object(body)
         timestamp = int(time.time()) if timestamp is None else timestamp
+        if type(timestamp) is not int or timestamp < 0:
+            raise AdapterBlocked("webhook timestamp must be unsigned epoch seconds")
         delivery_id = delivery_id or str(uuid.uuid4())
+        if _CANONICAL_UUID_V4.fullmatch(delivery_id) is None:
+            raise AdapterBlocked("webhook delivery must be a lowercase canonical UUIDv4")
         signature = hmac.new(
             self.secret,
             self.signed_bytes(timestamp, delivery_id, body),
             hashlib.sha256,
         ).hexdigest()
         return {
-            "x-privacy-timestamp": str(timestamp),
-            "x-privacy-delivery": delivery_id,
-            "x-privacy-signature": f"sha256={signature}",
+            WEBHOOK_TIMESTAMP_HEADER: str(timestamp),
+            WEBHOOK_DELIVERY_HEADER: delivery_id,
+            WEBHOOK_SIGNATURE_HEADER: f"{_SIGNATURE_PREFIX}{signature}",
         }
 
     @staticmethod
@@ -524,18 +553,32 @@ class WebhookVerifier:
     def verify(self, body: bytes, headers: dict[str, str], *, now: int | None = None) -> None:
         self._require_json_object(body)
         now = int(time.time()) if now is None else now
+        # Header names are case-insensitive on the wire (RFC 9110 field-name
+        # grammar), so a proxy that re-cases them must not break verification.
         try:
-            timestamp = int(headers["x-privacy-timestamp"])
-            delivery = str(uuid.UUID(headers["x-privacy-delivery"]))
-            supplied = headers["x-privacy-signature"]
-        except (KeyError, ValueError) as exc:
+            supplied_headers = {key.lower(): value for key, value in headers.items()}
+            raw_timestamp = supplied_headers[WEBHOOK_TIMESTAMP_HEADER.lower()]
+            delivery = supplied_headers[WEBHOOK_DELIVERY_HEADER.lower()]
+            supplied = supplied_headers[WEBHOOK_SIGNATURE_HEADER.lower()]
+        except (KeyError, AttributeError) as exc:
             raise AdapterBlocked("invalid webhook authentication headers") from exc
-        if abs(now - timestamp) > self.tolerance_seconds:
+        if _UNSIGNED_DECIMAL.fullmatch(raw_timestamp) is None:
+            raise AdapterBlocked("invalid webhook timestamp header")
+        if _CANONICAL_UUID_V4.fullmatch(delivery) is None:
+            raise AdapterBlocked("invalid webhook delivery header")
+        timestamp = int(raw_timestamp)
+        # `replay_window_seconds_exclusive`: the window is exclusive, so a skew
+        # of exactly `tolerance_seconds` is outside it and must be rejected.
+        if abs(now - timestamp) >= self.tolerance_seconds:
             raise AdapterBlocked("webhook timestamp outside tolerance")
         self._seen = {key: expiry for key, expiry in self._seen.items() if expiry > now}
         if delivery in self._seen:
             raise AdapterBlocked("webhook delivery replayed")
-        expected = self.sign(body, timestamp=timestamp, delivery_id=delivery)["x-privacy-signature"]
+        expected = self.sign(body, timestamp=timestamp, delivery_id=delivery)[
+            WEBHOOK_SIGNATURE_HEADER
+        ]
         if not hmac.compare_digest(supplied, expected):
             raise AdapterBlocked("invalid webhook signature")
-        self._seen[delivery] = max(now, timestamp) + self.tolerance_seconds
+        # Absolute deadline: the signed timestamp plus the replay window, never
+        # merely the window measured from receipt.
+        self._seen[delivery] = timestamp + self.tolerance_seconds
