@@ -6,6 +6,29 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- Schema inference claimed a primary key for a key column with no observed value.
+  Uniqueness over an all-null column is vacuously true, so a source export whose `id`
+  column was left blank inferred `primary_key: true` on a `null` column, and
+  `privacy-gateway synthesize` then exited 1 with `null column 'id' cannot be a primary
+  key` instead of generating rows. A primary key now requires at least one observed value.
+- An unknown foreign-key parent table was reported as `foreign-key relationship cycle is
+  not supported`, because the topological sort cannot place a parent that does not exist.
+  The real defect, `unknown parent table '…'`, is now raised before ordering.
+- `privacy_report`'s `non_key_cell_copy_rate` compared every synthetic cell against the
+  pooled values of all evaluation columns, so a cell that merely coincided with a value
+  from a different column counted as a copy. The normative contract
+  (`docs/normative-contract.md`) defines the metric against the same-column training
+  values, and each cell is now compared with its own column.
+- CI's `python` job failed on every Python in the matrix and no cell exercised an MCP SDK
+  at all. The oldest-supported-`mcp` cell installed `mcp==1.14.0` but left the runner's
+  pydantic 2.14 in place, and mcp 1.14's `fastmcp` imports
+  `pydantic._internal._typing_extra.eval_type_backport`, which pydantic 2.14 removed, so
+  the cell died at import collection and the two SDK cells below it never ran. The floor
+  now pins the pydantic line it is compatible with (`pydantic<2.14`, i.e. 2.13.x) and
+  imports the pair before the suite runs, so a silently satisfied pin fails on its own
+  line instead of as a pytest collection error.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed

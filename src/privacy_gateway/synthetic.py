@@ -159,9 +159,15 @@ def infer_schema(rows: list[dict[str, Any]], name: str = "table") -> TableSchema
             if numeric and mean is not None
             else None
         )
-        primary_key = column_name.lower() in {"id", f"{name.lower()}_id"} and len(
-            {str(value) for value in non_null}
-        ) == len(non_null)
+        # A key needs at least one observed value. Uniqueness over an all-null column is
+        # vacuous, and claiming it hands the generator a primary key it cannot produce:
+        # `synthesize` then dies with "null column ... cannot be a primary key" on a
+        # source whose key column happens to be empty.
+        primary_key = (
+            bool(non_null)
+            and column_name.lower() in {"id", f"{name.lower()}_id"}
+            and len({str(value) for value in non_null}) == len(non_null)
+        )
         columns.append(
             ColumnSchema(
                 name=column_name,
@@ -294,6 +300,12 @@ def synthesize_table(
 def synthesize_tables(
     schemas: dict[str, TableSchema], row_counts: dict[str, int], *, seed: str = "privacy-gateway"
 ) -> dict[str, list[dict]]:
+    for schema in schemas.values():
+        for relation in schema.foreign_keys:
+            if relation.parent_table not in schemas:
+                # Name the real defect here: the topological sort below cannot place a
+                # parent that does not exist, so it would report a phantom cycle.
+                raise ValueError(f"unknown parent table {relation.parent_table!r}")
     output = {
         name: synthesize_table(schema, row_counts.get(name, 0), seed=seed)
         for name, schema in schemas.items()
@@ -505,8 +517,11 @@ def privacy_report(
         return {"status": "not_evaluable", "reason": "no non-key evaluation columns"}
     real_rows = {tuple(str(row.get(name)) for name in evaluation) for row in real}
     exact = sum(tuple(str(row.get(name)) for name in evaluation) in real_rows for row in synthetic)
-    source_cells = {str(row.get(name)) for row in real for name in evaluation}
-    generated_cells = [str(row.get(name)) for row in synthetic for name in evaluation]
+    # The contract's non-key value-copy rate compares each cell with its own column's
+    # training values. Pooling every column made a synthetic value that merely coincided
+    # with a value from a different column count as a copied cell.
+    source_cells = {name: {str(row.get(name)) for row in real} for name in evaluation}
+    generated_cells = [(name, str(row.get(name))) for row in synthetic for name in evaluation]
     groups = Counter(tuple(str(row.get(name)) for name in quasi_identifiers) for row in synthetic)
     diversity: dict[str, int] = {}
     for sensitive in sensitive_columns:
@@ -517,7 +532,7 @@ def privacy_report(
         diversity[sensitive] = min((len(values) for values in buckets.values()), default=0)
     exact_rate = exact / len(synthetic)
     copy_rate = (
-        sum(value in source_cells for value in generated_cells) / len(generated_cells)
+        sum(value in source_cells[name] for name, value in generated_cells) / len(generated_cells)
         if generated_cells
         else 0.0
     )

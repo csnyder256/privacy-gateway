@@ -272,3 +272,67 @@ def test_source_has_no_sdv_dependency_or_import():
     source = (root / "src/privacy_gateway/synthetic.py").read_text(encoding="utf-8")
     assert '"sdv' not in dependency_files.lower()
     assert "import sdv" not in source.lower()
+
+
+def test_inference_never_claims_a_primary_key_with_no_observed_value():
+    """An empty key column must not infer a primary key the generator cannot produce.
+
+    Uniqueness over an all-null column is vacuously true, so inference used to mark it as
+    a primary key; ``synthesize`` then failed with "null column 'id' cannot be a primary
+    key" for any source export whose key column was left blank.
+    """
+    schema = infer_schema([{"id": None, "note": "a"}, {"id": None, "note": "b"}], "people")
+    assert schema.column("id").kind == "null"
+    assert schema.column("id").primary_key is False
+    generated = synthesize_table(schema, 5)
+    assert len(generated) == 5
+    assert all(row["id"] is None for row in generated)
+
+
+def test_cli_synthesizes_from_a_source_whose_key_column_is_empty(tmp_path):
+    source = tmp_path / "source.csv"
+    source.write_text(
+        "id,name,email\n,Ada,ada@example.com\n,Lin,lin@example.com\n", encoding="utf-8"
+    )
+    output = tmp_path / "generated.csv"
+    result = CliRunner().invoke(app, ["synthesize", str(source), str(output), "--rows", "4"])
+    assert result.exit_code == 0, result.stdout + str(result.exception)
+    rows = read_rows(output)
+    assert len(rows) == 4
+    assert all(row["id"] == "" for row in rows)
+
+
+def test_unknown_foreign_key_parent_is_named_instead_of_reported_as_a_cycle():
+    """A typo in a parent table name is not a cycle, and saying so sends users hunting."""
+    schemas = {
+        "children": TableSchema(
+            "children",
+            [
+                ColumnSchema("id", "integer", primary_key=True),
+                ColumnSchema("parent_id", "integer"),
+            ],
+            [ForeignKey("parent_id", "ghosts", "id")],
+        )
+    }
+    with pytest.raises(ValueError, match="unknown parent table 'ghosts'"):
+        synthesize_tables(schemas, {"children": 2})
+
+
+def test_value_copy_rate_compares_each_cell_with_its_own_column():
+    """Contract: copied non-key cells are compared against the same-column training values.
+
+    Pooling every evaluation column made a synthetic value that merely coincided with a
+    value from a different column count as a copied cell, inflating the leakage signal.
+    """
+    report = privacy_report(
+        [{"left": "SHARED", "right": "OTHER"}],
+        [{"left": "OTHER", "right": "OTHER"}],
+        quasi_identifiers=["left"],
+    )
+    assert report["non_key_cell_copy_rate"] == 0.5
+    same_column = privacy_report(
+        [{"left": "SHARED", "right": "OTHER"}],
+        [{"left": "SHARED", "right": "OTHER"}],
+        quasi_identifiers=["left"],
+    )
+    assert same_column["non_key_cell_copy_rate"] == 1.0
