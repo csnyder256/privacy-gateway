@@ -20,6 +20,14 @@ minor version and fixes raise the patch version.
   from a different column counted as a copy. The normative contract
   (`docs/normative-contract.md`) defines the metric against the same-column training
   values, and each cell is now compared with its own column.
+- CI's `python` job failed on every Python in the matrix and no cell exercised an MCP SDK
+  at all. The oldest-supported-`mcp` cell installed `mcp==1.14.0` but left the runner's
+  pydantic 2.14 in place, and mcp 1.14's `fastmcp` imports
+  `pydantic._internal._typing_extra.eval_type_backport`, which pydantic 2.14 removed, so
+  the cell died at import collection and the two SDK cells below it never ran. The floor
+  now pins the pydantic line it is compatible with (`pydantic<2.14`, i.e. 2.13.x) and
+  imports the pair before the suite runs, so a silently satisfied pin fails on its own
+  line instead of as a pytest collection error.
 
 ## 0.4.1 — 2026-09-28
 
