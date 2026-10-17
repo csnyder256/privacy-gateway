@@ -6,6 +6,25 @@ minor version and fixes raise the patch version.
 
 ## Unreleased
 
+### Fixed
+- `@privacy-gateway/client` threw a bare `SyntaxError` and discarded the HTTP status for
+  every gateway response whose body was not JSON. A gateway failure is not always JSON:
+  Starlette answers an unhandled exception with a `text/plain` "Internal Server Error",
+  a reverse proxy answers with an HTML error page, and a 503 can carry no body at all.
+  `request` called `response.json()` unconditionally, so those responses escaped as
+  `Unexpected token 'I', "Internal S"... is not valid JSON` instead of the package's
+  documented structured error, and the `error instanceof PrivacyGatewayError &&
+  error.status === 503` branch a caller writes for a retry or a monitor never ran for
+  exactly the failures it exists to catch — a real 500 from the running gateway reached
+  the client as a `SyntaxError` with no status. The body is now read once as text,
+  parsed when it parses and used verbatim when it does not, so every non-2xx response
+  raises `PrivacyGatewayError` carrying the status and the `detail` field when the body
+  is JSON — the same defensive read `privacy_gateway.client._raise` already performs,
+  and the same message for a non-JSON body (`gateway returned 500: Internal Server
+  Error`). A FastAPI validation `detail` list is serialized instead of collapsing to
+  `[object Object]`, and a `2xx` whose body is not the promised JSON is reported as a
+  structured error rather than as a parse accident.
+
 ## 0.4.1 — 2026-09-28
 
 ### Fixed
