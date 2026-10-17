@@ -33,9 +33,20 @@ jobs:
       # Exercise the real server on each, not just its source text.
       # The floor, then the newest of each line. -U matters: a satisfied
       # requirement would otherwise leave the previous step's version in place.
+      # The floor pins pydantic too. mcp 1.14's fastmcp imports the private
+      # pydantic._internal._typing_extra.eval_type_backport, which pydantic 2.14
+      # removed, and mcp declares only pydantic<3 -- so a bare install of the
+      # floor left the runner's pydantic 2.14 in place, the cell died at import
+      # on every Python in the matrix, and the two SDK cells below it were
+      # skipped, so nothing exercised any SDK at all. pydantic 2.13.x is the
+      # newest line that still exports the symbol and its pydantic-core ships
+      # wheels for 3.11 through 3.14.
       - name: MCP server on the oldest supported mcp (1.14)
         run: |
-          pip install 'mcp==1.14.0'
+          pip install 'mcp==1.14.0' 'pydantic<2.14'
+          # A silently satisfied requirement is how this cell broke, so prove the
+          # pair imports here rather than surfacing it as a pytest collection error.
+          python -c "import mcp, pydantic; from importlib.metadata import version; print('mcp', version('mcp'), '| pydantic', pydantic.VERSION)"
           pytest tests/test_mcp_server.py
       - name: MCP server on mcp 1.x
         run: |
