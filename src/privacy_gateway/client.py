@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Self
 
 import httpx
@@ -11,15 +12,50 @@ class PrivacyGatewayError(RuntimeError):
     """Raised when the gateway rejects a request or returns an invalid response."""
 
 
+def _describe_detail(body: object, fallback: str) -> str:
+    """The ``detail`` a JSON gateway error carries, as text, else ``fallback``."""
+    if isinstance(body, dict) and "detail" in body:
+        detail = body["detail"]
+        if isinstance(detail, str):
+            return detail
+        # FastAPI answers a validation failure with a list of objects, which an
+        # f-string would flatten to a Python repr instead of the JSON the caller
+        # can read back.
+        if detail is not None:
+            return json.dumps(detail)
+    return fallback
+
+
 def _raise(response: httpx.Response) -> None:
+    """Raise ``PrivacyGatewayError`` for anything that is not a JSON 2xx.
+
+    A gateway failure is not always JSON: Starlette answers an unhandled exception
+    with a ``text/plain`` "Internal Server Error", a reverse proxy answers with an
+    HTML error page, and a 503 can carry no body at all. The body is therefore read
+    once as text and parsed only when it parses, so a failure arrives as a
+    structured error carrying its status rather than as an ``AttributeError`` from
+    a JSON scalar or array, or as a bare decode error from a 2xx.
+    ``packages/client`` reads it the same way.
+    """
+    raw = response.text
     try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        try:
-            detail = response.json().get("detail", response.text)
-        except ValueError:
-            detail = response.text
-        raise PrivacyGatewayError(f"gateway returned {response.status_code}: {detail}") from exc
+        body: object = json.loads(raw)
+    except ValueError:
+        body, parsed = None, False
+    else:
+        parsed = True
+
+    if not response.is_success:
+        raise PrivacyGatewayError(
+            f"gateway returned {response.status_code}: "
+            f"{_describe_detail(body, raw.strip() or 'request failed')}"
+        )
+    if not parsed:
+        # A 2xx that is not the promised JSON is a contract break, not a parse
+        # accident: report it as a structured error rather than a decode error.
+        raise PrivacyGatewayError(
+            f"gateway returned {response.status_code}: response body was not JSON"
+        )
 
 
 class PrivacyGatewayClient:

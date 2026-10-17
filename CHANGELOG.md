@@ -24,6 +24,24 @@ minor version and fixes raise the patch version.
   Error`). A FastAPI validation `detail` list is serialized instead of collapsing to
   `[object Object]`, and a `2xx` whose body is not the promised JSON is reported as a
   structured error rather than as a parse accident.
+- `privacy_gateway.client` read a failed response with `response.json().get("detail", …)`,
+  which only holds for a JSON *object*. A gateway or proxy answering 502 with a body of
+  `null`, `[…]` or `"…"` made `.get` raise `AttributeError` and the status was lost — the
+  documented `except PrivacyGatewayError` never ran — and a 2xx whose body was not the
+  promised JSON escaped as a bare `JSONDecodeError`: the Python twin of the `SyntaxError`
+  fixed in `@privacy-gateway/client` above, and the reason the two clients disagreed on the
+  same response. The body is now read once as text and parsed only when it parses, so every
+  failure arrives as `PrivacyGatewayError` carrying its status, a FastAPI validation
+  `detail` list is serialized as JSON instead of a Python repr, an empty body reads
+  `request failed`, and both clients report the same message for the same response.
+- CI's `python` job failed on every Python in the matrix and no cell exercised an MCP SDK at
+  all. The oldest-supported-`mcp` cell installed `mcp==1.14.0` but left the runner's
+  pydantic 2.14 in place, and mcp 1.14's `fastmcp` imports
+  `pydantic._internal._typing_extra.eval_type_backport`, which pydantic 2.14 removed, so the
+  cell died at import and the two SDK cells below it were skipped. The floor now pins the
+  pydantic line it is compatible with (`pydantic<2.14`, i.e. 2.13.x, whose pydantic-core
+  ships wheels for 3.11 through 3.14) and imports the pair before the suite runs, so a
+  silently satisfied pin fails on its own line instead of as a pytest collection error.
 
 ## 0.4.1 — 2026-09-28
 
